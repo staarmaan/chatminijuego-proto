@@ -6,6 +6,8 @@ const exp = Math.exp
 const abs = Math.abs
 const pow = Math.pow
 const random = Math.random
+const floor = Math.floor
+const ceil = Math.ceil
 
 export const moveTo = function (value: number, destiny: number, steps: number): number {
   if (destiny != value) {
@@ -44,9 +46,18 @@ export const rpow = function(a: number, b: number, n = 2): number {
   return a + (b - a) * pow(random(), n)
 }
 
+export const round = function (x: number, increment = 0) {
+  if (increment !== 0) { return round(x / increment) * increment }
+  if (x >= 0) {
+    return floor(x + 0.5)
+  }
+  return ceil(x - 0.5)
+}
+
 /*
-function rpow(a, b, n) --n is 2 by default.
-    return a + (b - a) * (random() ^ (n or 2))
+function lume.round(x, increment)
+  if increment then return lume.round(x / increment) * increment end
+  return x >= 0 and math_floor(x + .5) or math_ceil(x - .5)
 end
 
 */

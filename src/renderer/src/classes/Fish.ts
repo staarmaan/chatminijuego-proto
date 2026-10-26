@@ -1,5 +1,5 @@
 import { Entity } from './Entity';
-import { moveTo, fromPloar, angleTo, rpow, expDec } from '../utils'
+import { moveTo, fromPloar, angleTo, rpow, expDec, round } from '../utils'
 import EnumFishTypes from './EnumFishTypes';
 
 const textureKeys = {
@@ -20,7 +20,7 @@ const random = Math.random
 
 export class Fish extends Entity {
   public readonly fishType: EnumFishTypes
-  public readonly fishSize: number
+  public readonly fishScale: number
   public targetAngle: number
   public targetSpeed: number
   public currentSpeed: number
@@ -28,9 +28,10 @@ export class Fish extends Entity {
   public movementPatternTimer: number
 
   private gotFlipedDir: number = 0
-  private flipAngle:number = 0.0
+  private flipAngle: number = 0.0
+  private turnAroundTimer: number = 0.0
 
-  constructor(scene: Phaser.Scene, x: number, y: number, fishType: EnumFishTypes) {
+  constructor(scene: Phaser.Scene, x: number, y: number, fishType: EnumFishTypes, fishScale = 0) {
     const fishTextureKey = textureKeys[fishType]
 
     super(scene, x, y, fishTextureKey)
@@ -45,9 +46,10 @@ export class Fish extends Entity {
 
     this.play(`${fishTextureKey}-default`, true)
 
-    this.fishSize = Math.floor(rpow(1, 4, 1.5))
+    this.fishScale = round(fishScale)
+    if (this.fishScale === 0) { this.fishScale = round( rpow(1, 5, 1.6) ) }
 
-    this.setScale(this.fishSize)
+    this.setScale(this.fishScale)
     this.setCircle(10)
     this.body?.setOffset(11, 12)
   }
@@ -61,12 +63,13 @@ export class Fish extends Entity {
       this.movementPatternTimer = MIN_MOVEMENT_PATTERN_SECONDS + (random() * MAX_MOVEMENT_PATTERN_SECONDS)
       //this.movementPatternTimer = -(random() * MAX_MOVEMENT_PATTERN_SECONDS)
       this.targetAngle = 2*random() - 1
-      this.targetSpeed = random()
+      this.targetSpeed = 0.05 + 0.95 * random()
     }
     this.currentAngle = moveTo(this.currentAngle, this.targetAngle, ACCELERATION*dt)
     this.currentSpeed = moveTo(this.currentSpeed, this.targetSpeed, ACCELERATION * dt)
 
-    if (this.isOffScreen(64, 64)) {
+    const outPixels = 50 + 8 * this.fishScale
+    if (this.isOffScreen(outPixels, outPixels)) {
       const { width, height } = this.scene.scale
       const angleOffset = (2*random() - 1) * 0.22
       const gotoAngle = angleTo(this.x, this.y, width * 0.5, height * 0.5) * INV_PI + angleOffset
@@ -74,7 +77,8 @@ export class Fish extends Entity {
       this.targetAngle = gotoAngle
       this.movementPatternTimer = 0
 
-      if (this.isOffScreen(-14, -14)) { this.currentAngle = gotoAngle }
+      const evenmoreOutPixels = -6 - 8 * this.fishScale
+      if (this.isOffScreen(evenmoreOutPixels, evenmoreOutPixels)) { this.currentAngle = gotoAngle }
 
       //this.x = width * 0.5
       //this.y = height * 0.5
@@ -85,7 +89,9 @@ export class Fish extends Entity {
     this.setVelocity(vel[0], vel[1])
 
     const velx = this.body!.velocity.x
-    if (velx != 0) {
+    this.turnAroundTimer += dt
+    if (velx != 0 && this.turnAroundTimer > 0.0) {
+      this.turnAroundTimer = -Math.random() * 0.4
       const angle = 35.5
       if (velx > 0) {
         this.setFlipX(false)
@@ -102,12 +108,12 @@ export class Fish extends Entity {
       }
     }
     this.setAngle(this.flipAngle)
-    this.flipAngle = expDec(this.flipAngle, 0.0, 12.0, dt, 0.0001)
+    this.flipAngle = expDec(this.flipAngle, 0.0, 13.0, dt, 0.0001)
   }
 
   onTouch(other: Entity): void {
     if (other instanceof Fish) {
-      if (other.fishSize > this.fishSize) {
+      if (other.fishScale > this.fishScale) {
         let gotoAngle: number
 
         if (other.x == this.x && other.y == this.y) {
