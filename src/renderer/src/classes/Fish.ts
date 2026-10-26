@@ -30,6 +30,8 @@ export class Fish extends Entity {
   private gotFlipedDir: number = 0
   private flipAngle: number = 0.0
   private turnAroundTimer: number = 0.0
+  private targetEatFish: Fish | null = null
+  private scanFishTimer: number = 0.0
 
   constructor(scene: Phaser.Scene, x: number, y: number, fishType: EnumFishTypes, fishScale = 0) {
     const fishTextureKey = textureKeys[fishType]
@@ -54,6 +56,52 @@ export class Fish extends Entity {
     this.body?.setOffset(11, 12)
   }
 
+  scapeFromBigFishes(range: number): void {
+    if (!this.targetEatFish?.active) { this.targetEatFish = null }
+    if (this.targetEatFish) { return }
+
+    const rangeSq = range * range
+    this.scene.children.each((other) => {
+      if (other instanceof Fish) {
+        if (!other.active) { return }
+        if (this.scale === other.scale) {return}
+        const dx = other.x - this.x
+        const dy = other.y - this.y
+        if ((dx*dx + dy*dy) > rangeSq) { return }
+
+        let gotoAngle = random()
+        const samePos = other.x == this.x && other.y == this.y
+
+        if (other.fishScale > this.fishScale) { //escape from bigger fish
+          if (!samePos) {
+            const angleOffset = (2*gotoAngle - 1) * 0.22
+            gotoAngle = angleTo(other.x, other.y, this.x, this.y) * INV_PI + angleOffset
+          }
+          this.anims.timeScale = 3.0
+          this.targetEatFish = null
+        } else {                                //go eat smaller fish
+          if (!samePos) {
+            gotoAngle = angleTo(this.x, this.y, other.x, other.y) * INV_PI
+          }
+          this.targetEatFish = other
+          this.anims.timeScale = 1.5
+          this.currentSpeed = 0.0
+        }
+
+        //this.currentAngle = gotoAngle
+        this.targetAngle = gotoAngle
+        this.targetSpeed = 1.0
+      }
+    })
+    /*
+    return targets.filter((t) => {
+      if (!t.active) return false
+      const dx = t.x - this.x
+      const dy = t.y - this.y
+      return dx * dx + dy * dy <= rangeSq
+    })*/
+  }
+
   override update(_time: number, delta: number): void {
     const dt = delta * 0.001
 
@@ -64,7 +112,15 @@ export class Fish extends Entity {
       //this.movementPatternTimer = -(random() * MAX_MOVEMENT_PATTERN_SECONDS)
       this.targetAngle = 2*random() - 1
       this.targetSpeed = 0.05 + 0.95 * random()
+      this.anims.timeScale = 1.0
     }
+
+    this.scanFishTimer += dt
+    if (this.scanFishTimer > 0.0) {
+      this.scapeFromBigFishes(100.0)
+      this.scanFishTimer = Math.random()
+    }
+
     this.currentAngle = moveTo(this.currentAngle, this.targetAngle, ACCELERATION*dt)
     this.currentSpeed = moveTo(this.currentSpeed, this.targetSpeed, ACCELERATION * dt)
 
@@ -112,21 +168,10 @@ export class Fish extends Entity {
   }
 
   onTouch(other: Entity): void {
+    if (this.targetEatFish === null) { return }
     if (other instanceof Fish) {
-      if (other.fishScale > this.fishScale) {
-        let gotoAngle: number
-
-        if (other.x == this.x && other.y == this.y) {
-          gotoAngle = random()
-        } else {
-          const angleOffset = (2*random() - 1) * 0.22
-          gotoAngle = angleTo(other.x, other.y, this.x, this.y) * INV_PI + angleOffset
-        }
-
-        this.currentAngle = gotoAngle
-        this.targetAngle = gotoAngle
-        this.currentSpeed = 1.0
-        this.targetSpeed = 1.0
+      if (other === this.targetEatFish && other !== this) {
+        other.destroy()
       }
     }
   }
