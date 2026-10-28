@@ -6,7 +6,7 @@ import { ReverseEnumFishType } from './classes/EnumFishTypes'
 import { Button } from './classes/Button'
 
 class MainScene extends Phaser.Scene {
-  private fishes: Phaser.Physics.Arcade.Group
+  private fishes!: Phaser.Physics.Arcade.Group
   private fishScale: number = 1
   private fishTypeIndex: number = 0
 
@@ -52,9 +52,19 @@ class MainScene extends Phaser.Scene {
       }
     }
 
-    const button = new Button(this, 48, 16, "spawn", () => {
+    const scene = this
+    //api declarado desdde src/preload/index.ts
+    if (window.api && typeof window.api.onSpawnFish === 'function') {
+      window.api.onSpawnFish((payload: any) => {
+        scene.spawnFishFromPayload(payload)
+      })
+    }
+
+    new Button(this, 48, 16, "spawn", () => {
       //Argument of type 'string' is not assignable to parameter of type 'EnumFishTypes'. Wdym not it works just fine!!!!
-      const fish = new Fish(this, 200, 400, EnumFishTypes[ReverseEnumFishType[this.fishTypeIndex]], this.fishScale)
+      const fishTypeName = (ReverseEnumFishType as any)[this.fishTypeIndex]
+      const fishType = (EnumFishTypes as any)[fishTypeName] as EnumFishTypes
+      const fish = new Fish(this, 200, 400, fishType, this.fishScale)
       this.fishes.add(fish)
     })
 
@@ -82,8 +92,53 @@ class MainScene extends Phaser.Scene {
     })
   }
 
-  update(_time: number, delta: number): void {
-    const dt = delta * 0.001
+  private spawnFishFromPayload(payload: any): void {
+    if (!payload) return
+    let fishType: EnumFishTypes = EnumFishTypes.CLOWNFISH
+    const fishTypeVal = payload.fishType
+
+    if (typeof fishTypeVal === 'number') {
+      if (fishTypeVal >= EnumFishTypes.CLOWNFISH && fishTypeVal <= EnumFishTypes.TAUTOG) {
+        fishType = fishTypeVal
+      } else if (fishTypeVal >= 0 && fishTypeVal <= 6) {
+        // try to map by numeric value
+        fishType = fishTypeVal as EnumFishTypes
+      }
+    } else if (typeof fishTypeVal === 'string') {
+      const key = fishTypeVal.trim().toUpperCase()
+      // try direct enum access
+      if (key in EnumFishTypes) {
+        const enumVal = (EnumFishTypes as any)[key]
+        if (typeof enumVal === 'number') {
+          fishType = enumVal
+        }
+      } else {
+        // try matching values
+        for (const [k, v] of Object.entries(EnumFishTypes)) {
+          if (typeof v === 'number' && k.toUpperCase() === key) {
+            fishType = v
+            break
+          }
+        }
+      }
+    }
+
+    let scale = 0
+    if (payload.scale !== undefined && payload.scale !== null) {
+      const parsed = typeof payload.scale === 'string' ? parseFloat(payload.scale) : Number(payload.scale)
+      if (!isNaN(parsed)) {
+        scale = Math.max(0, Math.min(5, Math.round(parsed)))
+      }
+    }
+
+    const x = 200 + (Math.random() * 40 - 20)
+    const y = 400 + (Math.random() * 40 - 20)
+    const fish = new Fish(this, x, y, fishType, scale)
+    this.fishes.add(fish)
+  }
+
+  update(_time: number, _delta: number): void {
+    //const dt = _delta * 0.001
     //const tiempo = _time * 0.001
 
 

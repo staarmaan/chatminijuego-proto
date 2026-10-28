@@ -1,8 +1,16 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  onSpawnFish: (callback: (payload: any) => void): (() => void) => {
+    const listener = (_event: any, payload: any) => callback(payload)
+    ipcRenderer.on('spawn-fish', listener)
+    return () => {
+      ipcRenderer.removeListener('spawn-fish', listener)
+    }
+  }
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

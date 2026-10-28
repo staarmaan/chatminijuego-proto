@@ -2,6 +2,60 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import * as net from 'net'
+
+let mainWindowRef: BrowserWindow | null = null
+
+function startFishSocketServer(port = 7777): void {
+  const server = net.createServer((socket) => {
+    socket.setEncoding('utf8')
+    socket.on('data', (data) => {
+      try {
+        const raw = data.toString().trim()
+        if (!raw) return
+        let payload: any = null
+        if (raw.startsWith('{')) {
+          try {
+            payload = JSON.parse(raw)
+          } catch (e) {
+            payload = null
+          }
+        }
+        if (!payload) {
+          const normalized = raw.replace(/,/g, ' ')
+          const parts = normalized.split(/\s+/)
+          if (parts.length === 0) return
+          const cmd = parts[0].toLowerCase()
+          if (cmd === 'spawn' || cmd === 'add' || cmd === 'fish' || cmd === 'create') {
+            if (parts.length >= 3) {
+              payload = { fishType: parts[1], scale: parts[2] }
+            } else if (parts.length === 2) {
+              payload = { fishType: parts[1], scale: 0 }
+            }
+          } else if (parts.length >= 2) {
+            payload = { fishType: parts[0], scale: parts[1] }
+          } else if (parts.length === 1) {
+            payload = { fishType: parts[0], scale: 0 }
+          }
+        }
+        if (payload && mainWindowRef && !mainWindowRef.isDestroyed()) {
+          mainWindowRef.webContents.send('spawn-fish', payload)
+        }
+      } catch (e) {
+        console.error('Error handling socket data:', e)
+      }
+    })
+    socket.on('error', (err) => {
+      console.error('Socket client error:', err)
+    })
+  })
+  server.listen(port, '127.0.0.1', () => {
+    console.log(`Fish spawn socket server listening on 127.0.0.1:${port}`)
+  })
+  server.on('error', (err) => {
+    console.error('Fish spawn socket server error:', err)
+  })
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -16,6 +70,7 @@ function createWindow(): void {
       sandbox: false
     }
   })
+  mainWindowRef = mainWindow
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -51,6 +106,8 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  startFishSocketServer(7777)
 
   createWindow()
 
