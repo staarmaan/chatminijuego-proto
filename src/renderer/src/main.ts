@@ -1,10 +1,12 @@
 import Phaser from 'phaser'
 import { preloadAnims, createAnims } from './assets/anims'
 import { Fish } from './classes/Fish'
+import { BubbleParticle } from './classes/BubbleParticle'
 import { Button } from './classes/Button'
 
 class MainScene extends Phaser.Scene {
   private fishes!: Phaser.Physics.Arcade.Group
+  private bubbles!: Phaser.Physics.Arcade.Group
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
 
@@ -21,6 +23,8 @@ class MainScene extends Phaser.Scene {
       (a as Fish).onTouch(b as Fish)
     })
 
+    this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
+
     const { width, height } = this.sys.game.config as { width: number; height: number };
     const bg = this.add.image(width*0.5, height*0.5, 'bg');
     bg.setDisplaySize(width, height);
@@ -31,6 +35,11 @@ class MainScene extends Phaser.Scene {
     for (let i = 0; i < 6; i++) {
       const fish = new Fish(this, width*0.5, height*0.5, 0, i)
       this.fishes.add(fish)
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const bubble = new BubbleParticle(this)
+      this.bubbles.add(bubble)
     }
 
     const scene = this

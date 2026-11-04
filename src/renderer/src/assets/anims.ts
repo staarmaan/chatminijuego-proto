@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import fishShet from './images/fishes/smallFishes.png'
+import bubbleParticleSheet from './images/bubbleParticle.png'
 import bg from './images/bg.png'
 import hud from './images/hud.png'
 
@@ -9,6 +10,10 @@ export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.spritesheet('smallFish', fishShet, {
     frameWidth: 16,
     frameHeight: 16
+  })
+  scene.load.spritesheet('bubbleParticle', bubbleParticleSheet, {
+    frameWidth: 7,
+    frameHeight: 7
   })
 }
 
@@ -24,4 +29,13 @@ export const createAnims = (scene: Phaser.Scene): void => {
       repeat: -1
     })
   }
+  scene.anims.create({
+    key: `bubbleParticleDef`,
+    frames: scene.anims.generateFrameNumbers('bubbleParticle', {
+      start: 0,
+      end: 5,
+    }),
+    frameRate: 5,
+    repeat: 0
+  })
 }

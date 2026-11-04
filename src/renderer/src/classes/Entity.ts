@@ -28,8 +28,8 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     return (
       (this.x - offsetX) + this.displayWidth * 0.5 < 0 || //out leftwards
       (this.x + offsetX) - this.displayWidth * 0.5 > width || //out rightwards
-      (this.y - offsetY) + this.displayHeight * 0.5 < 0 ||
-      (this.y + offsetY) - this.displayHeight * 0.5 > height
+      (this.y - offsetY) + this.displayHeight * 0.5 < (height * 0.15) ||
+      (this.y + offsetY) - this.displayHeight * 0.5 > (height * 0.85)
     )
   }
 }
