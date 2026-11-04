@@ -1,41 +1,19 @@
 import Phaser from 'phaser'
-import { fishSheets } from './assets/fishSheets'
+import { preloadAnims, createAnims } from './assets/anims'
 import { Fish } from './classes/Fish'
-import EnumFishTypes from './classes/EnumFishTypes'
-import { ReverseEnumFishType } from './classes/EnumFishTypes'
 import { Button } from './classes/Button'
 
 class MainScene extends Phaser.Scene {
   private fishes!: Phaser.Physics.Arcade.Group
-  private fishScale: number = 1
   private fishTypeIndex: number = 0
+  private fishSubtypeIndex: number = 0
 
   preload(): void {
-    for (const sheet of fishSheets) {
-      this.load.spritesheet(sheet.key, sheet.url, {
-        frameWidth: sheet.frameWidth,
-        frameHeight: sheet.frameHeight
-      })
-    }
+    preloadAnims(this)
   }
 
   create(): void {
-    for (const sheet of fishSheets) {
-      const animKey = `${sheet.key}-default`
-      //const animKey = 'default'
-
-      if (!this.anims.exists(animKey)) {
-        this.anims.create({
-          key: animKey,
-          frames: this.anims.generateFrameNumbers(sheet.key, {
-            start: 0,
-            end: sheet.frameCount - 1
-          }),
-          frameRate: 10,
-          repeat: -1
-        })
-      }
-    }
+    createAnims(this)
 
     this.fishes = this.physics.add.group({ classType: Fish, runChildUpdate: true })
     this.physics.add.overlap(this.fishes, this.fishes, (a, b) => {
@@ -43,13 +21,16 @@ class MainScene extends Phaser.Scene {
       (a as Fish).onTouch(b as Fish)
     })
 
-    for (const fishType of Object.values(EnumFishTypes)) {
-      if (typeof fishType === 'number') {
-        for (let i = 0; i < 1; i++) {
-          const fish = new Fish(this, 200, 400, fishType)
-          this.fishes.add(fish)
-        }
-      }
+    const { width, height } = this.sys.game.config as { width: number; height: number };
+    const bg = this.add.image(width*0.5, height*0.5, 'bg');
+    bg.setDisplaySize(width, height);
+    const hud = this.add.image(width*0.5, height*0.5, 'hud');
+    hud.setDisplaySize(width, height);
+    hud.setDepth(1)
+
+    for (let i = 0; i < 6; i++) {
+      const fish = new Fish(this, width*0.5, height*0.5, 0, i)
+      this.fishes.add(fish)
     }
 
     const scene = this
@@ -60,35 +41,25 @@ class MainScene extends Phaser.Scene {
       })
     }
 
-    new Button(this, 48, 16, "spawn", () => {
+    const buttonSeparationX = 40
+    new Button(this, 8, 8, "spawn", () => {
       //Argument of type 'string' is not assignable to parameter of type 'EnumFishTypes'. Wdym not it works just fine!!!!
-      const fishTypeName = (ReverseEnumFishType as any)[this.fishTypeIndex]
-      const fishType = (EnumFishTypes as any)[fishTypeName] as EnumFishTypes
-      const fish = new Fish(this, 200, 400, fishType, this.fishScale)
+      const fish = new Fish(this, width*0.5, height*0.5, this.fishTypeIndex, this.fishSubtypeIndex)
       this.fishes.add(fish)
     })
 
-    const buttonScale = new Button(this, 152, 16, "scale: 1", () => {
-      this.fishScale++
-      this.fishScale %= 6
-      //if (this.fishScale > 5) {this.fishScale = 1}
-      const text = this.fishScale === 0 && 'scale: random' || `scale: ${this.fishScale}`
-      buttonScale.setText(text)
+    const typeNames = ['small', 'med', 'big']
+    const buttonFishType = new Button(this, 8+buttonSeparationX , 8, `${typeNames[this.fishTypeIndex]}`, () => {
+      this.fishTypeIndex++
+      this.fishTypeIndex %= 3
+      buttonFishType.setText(`${typeNames[this.fishTypeIndex]}`)
     })
 
-    const textureKeys = {
-      [EnumFishTypes.BASA]: 'fish-basa',
-      [EnumFishTypes.BLUETANG]: 'fish-bluetang',
-      [EnumFishTypes.CLOWNFISH]: 'fish-clownfish',
-      [EnumFishTypes.FIGHTERFISH]: 'fish-fighter',
-      [EnumFishTypes.POMFRET]: 'fish-pomfret',
-      [EnumFishTypes.SALMON]: 'fish-salmon',
-      [EnumFishTypes.TAUTOG]: 'fish-tautog',
-    }
-    const buttonFishType = new Button(this, 300, 16, `${textureKeys[this.fishTypeIndex]}`, () => {
-      this.fishTypeIndex++
-      this.fishTypeIndex %= Object.entries(textureKeys).length
-      buttonFishType.setText(`${textureKeys[this.fishTypeIndex]}`)
+    const smallTypeCount = 6
+    const buttonFishSubtype = new Button(this, 8+buttonSeparationX*2, 8, `${this.fishSubtypeIndex}`, () => {
+      this.fishSubtypeIndex++
+      this.fishSubtypeIndex %= smallTypeCount
+      buttonFishSubtype.setText(`${this.fishSubtypeIndex}`)
     })
   }
 
@@ -149,8 +120,11 @@ class MainScene extends Phaser.Scene {
 
 new Phaser.Game({
   type: Phaser.AUTO,
-  width: 400,
-  height: 800,
+  width: 160,
+  height: 320,
+  scale: {
+      mode: Phaser.Scale.FIT, // Fits the game inside the parent/window
+  },
   parent: 'app',
   pixelArt: true,
   backgroundColor: '#1a1a2e',

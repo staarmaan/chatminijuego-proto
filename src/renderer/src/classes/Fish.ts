@@ -1,16 +1,5 @@
 import { Entity } from './Entity';
 import { moveTo, fromPloar, angleTo, rpow, expDec, round } from '../utils'
-import EnumFishTypes from './EnumFishTypes';
-
-const textureKeys = {
-  [EnumFishTypes.BASA]: 'fish-basa',
-  [EnumFishTypes.BLUETANG]: 'fish-bluetang',
-  [EnumFishTypes.CLOWNFISH]: 'fish-clownfish',
-  [EnumFishTypes.FIGHTERFISH]: 'fish-fighter',
-  [EnumFishTypes.POMFRET]: 'fish-pomfret',
-  [EnumFishTypes.SALMON]: 'fish-salmon',
-  [EnumFishTypes.TAUTOG]: 'fish-tautog',
-}
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 2.22
 const MAX_MOVEMENT_PATTERN_SECONDS = 5.55555 + MIN_MOVEMENT_PATTERN_SECONDS
@@ -18,8 +7,13 @@ const ACCELERATION = 0.666666
 const INV_PI = 1/Math.PI
 const random = Math.random
 
+const textureKeys = [
+  'smallFish', 'medFish', 'bigFish'
+]
+
 export class Fish extends Entity {
-  public readonly fishType: EnumFishTypes
+  public readonly fishType: number
+  public readonly fishSubtype: number
   public readonly fishScale: number
   public targetAngle: number
   public targetSpeed: number
@@ -33,7 +27,7 @@ export class Fish extends Entity {
   private targetEatFish: Fish | null = null
   private scanFishTimer: number = 0.0
 
-  constructor(scene: Phaser.Scene, x: number, y: number, fishType: EnumFishTypes, fishScale = 0) {
+  constructor(scene: Phaser.Scene, x: number, y: number, fishType: number, fishSubtype: number) {
     const fishTextureKey = textureKeys[fishType]
 
     super(scene, x, y, fishTextureKey)
@@ -45,15 +39,12 @@ export class Fish extends Entity {
     this.movementPatternTimer = MIN_MOVEMENT_PATTERN_SECONDS + (random() * MAX_MOVEMENT_PATTERN_SECONDS)
 
     this.fishType = fishType
+    this.fishSubtype = fishSubtype
+    this.play(`${fishTextureKey}${fishSubtype}`, true)
 
-    this.play(`${fishTextureKey}-default`, true)
-
-    this.fishScale = round(fishScale)
-    if (this.fishScale === 0) { this.fishScale = round( rpow(1, 5, 1.6) ) }
-
-    this.setScale(this.fishScale)
+    this.fishScale = 1
     this.setCircle(10)
-    this.body?.setOffset(11, 12)
+    //this.body?.setOffset(11, 12)
   }
 
   scapeFromBigFishes(range: number): void {
