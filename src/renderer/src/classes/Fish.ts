@@ -1,5 +1,6 @@
 import { Entity } from './Entity';
 import { moveTo, fromPloar, angleTo, rpow, expDec, round } from '../utils'
+import { FishFood } from './FishFood';
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 0.0
 const MAX_MOVEMENT_PATTERN_SECONDS = 1.5
@@ -10,12 +11,13 @@ const textureKeys = [
 ]
 
 export class Fish extends Entity {
-  public readonly fishType: number //Bigger type also equals a bigger fish.
-  public readonly fishSubtype: number
+  public readonly fishType: number //El tipo define el tamaño.
+  public readonly fishSubtype: number //Define solo la aperiencia (por ahora)
   public readonly fishScale: number
   public targetVely: number
   public targetVelx: number
   public movementPatternTimer: number
+
 
   private gotFlipedDir: number = 0
   private flipAngle: number = 0.0
@@ -25,8 +27,11 @@ export class Fish extends Entity {
 
   constructor(scene: Phaser.Scene, x: number, y: number, fishType: number, fishSubtype: number) {
     const fishTextureKey = textureKeys[fishType]
-
     super(scene, x, y, fishTextureKey)
+
+    const baseDepth = 3
+    const typeDepth = 2 - fishType
+    this.setDepth(baseDepth + typeDepth)
 
     this.targetVelx = random()*2 - 1
     this.targetVely = random()*2 - 1
@@ -37,8 +42,9 @@ export class Fish extends Entity {
     this.play(`${fishTextureKey}${fishSubtype}`, true)
 
     this.fishScale = 1
-    this.setCircle(4)
-    //this.body?.setOffset(11, 12)
+    const size = 4 * (1+fishType)
+    this.setCircle(size)
+    this.body?.setOffset(size,size)
   }
 
   scapeFromBigFishes(range: number): void {
@@ -87,9 +93,23 @@ export class Fish extends Entity {
     })*/
   }
 
-  override update(_time: number, delta: number): void {
-    const dt = delta * 0.001
+  scanFood(): void {
+    const range = 120.0
+    const rangeSq = range * range
+    this.scene.children.each((food) => {
+      if (food instanceof FishFood) {
+        if (!food.active) { return }
+        if (this.scale === food.scale) { return }
+        const dx = food.x - this.x
+        const dy = food.y - this.y
+        if ((dx * dx + dy * dy) > rangeSq) { return }
 
+
+      }
+    })
+  }
+
+  override thisupdate(dt: number): void {
     this.movementPatternTimer += dt
 
     if (this.movementPatternTimer > MAX_MOVEMENT_PATTERN_SECONDS) {
@@ -116,17 +136,18 @@ export class Fish extends Entity {
       this.scanFishTimer = Math.random()
     }
 
-    const speed = 32.0
+    const speed = 25.0
     const accel = speed
     this.setVelocityX(moveTo(this.body!.velocity.x, this.targetVelx * speed, dt * accel))
     this.setVelocityY(moveTo(this.body!.velocity.y, this.targetVely * speed, dt * accel))
 
-    const outPixels = 24 + 8 * this.fishType
-    if (this.isOffScreen(outPixels, outPixels)) {
+    const outPixelsX = 24 + 8 * this.fishType
+    const outPixelsY = 40 + 24 + 8 * this.fishType
+    if (this.isOffScreen(outPixelsX, outPixelsY)) {
       const { width, height } = this.scene.scale
-      const angleOffset = (2*random() - 1) * 0.8
+      const angleOffset = (2*random() - 1) * 1.001
       const gotoAngle = angleTo(this.x, this.y, width * 0.5, height * 0.5) + angleOffset
-      const vel = fromPloar(gotoAngle, rpow(1, 0, 4))
+      const vel = fromPloar(gotoAngle, rpow(1, 0, 8))
       this.targetVelx = vel[0]
       this.targetVely = vel[1]
 
@@ -138,8 +159,8 @@ export class Fish extends Entity {
     this.turnAroundTimer += dt
     if (velx != 0 && this.turnAroundTimer > 0.0) {
       this.turnAroundTimer = -Math.random() * 0.4
-      let angle = 35.0
-      if (vely < 0) { angle = -35.0 }
+      let angle = 45.0
+      if (vely < 0) { angle = -angle }
 
       if (velx > 0) {
         this.setFlipX(false)
@@ -156,7 +177,7 @@ export class Fish extends Entity {
       }
     }
     this.setAngle(this.flipAngle)
-    this.flipAngle = expDec(this.flipAngle, 0.0, 13.0, dt, 0.0001)
+    this.flipAngle = expDec(this.flipAngle, 0.0, 12.5, dt, 0.0001)
 
     const halfSpeed = speed * 0.5
     const len2 = velx*velx + vely*vely
@@ -174,5 +195,9 @@ export class Fish extends Entity {
         other.destroy()
       }
     }
+  }
+
+  onTouchFishFood(food: FishFood): void {
+
   }
 }

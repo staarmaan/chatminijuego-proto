@@ -10,7 +10,7 @@ export class Button extends Phaser.GameObjects.Text {
     scene.add.existing(this)
     this.setOrigin(0).setInteractive({ useHandCursor: true })
 
-    this.setDepth(10)
+    this.setDepth(10000)
 
     this.on('pointerover', () => this.setStyle({ backgroundColor: '#555' }))
     this.on('pointerout', () => this.setStyle({ backgroundColor: '#333' }))

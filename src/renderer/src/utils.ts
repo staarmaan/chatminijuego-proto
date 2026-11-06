@@ -9,6 +9,10 @@ const random = Math.random
 const floor = Math.floor
 const ceil = Math.ceil
 
+export const clamp = function (value: number, minValue: number, maxValue: number): number {
+  return max(min(value, maxValue), minValue)
+}
+
 export const moveTo = function (value: number, destiny: number, steps: number): number {
   if (destiny != value) {
     if (destiny > value) {
@@ -42,16 +46,24 @@ export const expDec = function (from: number, to: number, decay: number, dt: num
   return result
 }
 
+export const rnum = function(a: number, b: number): number {
+  return a + (b - a) * random()
+}
+
 export const rpow = function(a: number, b: number, n = 2): number {
   return a + (b - a) * pow(random(), n)
 }
 
-export const round = function (x: number, increment = 0) {
+export const round = function (x: number, increment = 0): number {
   if (increment !== 0) { return round(x / increment) * increment }
   if (x >= 0) {
     return floor(x + 0.5)
   }
   return ceil(x - 0.5)
+}
+
+export const randbool = function (): boolean {
+  return random() > 0.5
 }
 
 /*

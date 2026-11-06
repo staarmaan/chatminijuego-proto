@@ -3,10 +3,12 @@ import { preloadAnims, createAnims } from './assets/anims'
 import { Fish } from './classes/Fish'
 import { BubbleParticle } from './classes/BubbleParticle'
 import { Button } from './classes/Button'
+import { FishFood } from './classes/FishFood'
 
 class MainScene extends Phaser.Scene {
   private fishes!: Phaser.Physics.Arcade.Group
   private bubbles!: Phaser.Physics.Arcade.Group
+  private fishFood!: Phaser.Physics.Arcade.Group
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
 
@@ -24,22 +26,32 @@ class MainScene extends Phaser.Scene {
     })
 
     this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
+    this.fishFood = this.physics.add.group({ classType: FishFood, runChildUpdate: true })
+    this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
+      if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
+      (fish as Fish).onTouch(food as FishFood)
+    })
 
     const { width, height } = this.sys.game.config as { width: number; height: number };
     const bg = this.add.image(width*0.5, height*0.5, 'bg');
     bg.setDisplaySize(width, height);
     const hud = this.add.image(width*0.5, height*0.5, 'hud');
     hud.setDisplaySize(width, height);
-    hud.setDepth(1)
+    hud.setDepth(100)
 
     for (let i = 0; i < 6; i++) {
       const fish = new Fish(this, width*0.5, height*0.5, 0, i)
       this.fishes.add(fish)
     }
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const bubble = new BubbleParticle(this)
       this.bubbles.add(bubble)
+    }
+
+    for (let i = 0; i < 100; i++) {
+      const fishFoodTest = new FishFood(this)
+      this.fishFood.add(fishFoodTest)
     }
 
     const scene = this
