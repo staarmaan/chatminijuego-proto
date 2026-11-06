@@ -29,7 +29,7 @@ class MainScene extends Phaser.Scene {
     this.fishFood = this.physics.add.group({ classType: FishFood, runChildUpdate: true })
     this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
       if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
-      (fish as Fish).onTouch(food as FishFood)
+      (fish as Fish).onTouchFishFood(food as FishFood)
     })
 
     const { width, height } = this.sys.game.config as { width: number; height: number };
