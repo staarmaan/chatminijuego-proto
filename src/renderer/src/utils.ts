@@ -8,6 +8,7 @@ const pow = Math.pow
 const random = Math.random
 const floor = Math.floor
 const ceil = Math.ceil
+const sqrt = Math.sqrt
 
 export const clamp = function (value: number, minValue: number, maxValue: number): number {
   return max(min(value, maxValue), minValue)
@@ -66,10 +67,20 @@ export const randbool = function (): boolean {
   return random() > 0.5
 }
 
-/*
-function lume.round(x, increment)
-  if increment then return lume.round(x / increment) * increment end
-  return x >= 0 and math_floor(x + .5) or math_ceil(x - .5)
-end
+export const normalize = function (x: number, y: number): number[] {
+  const len = sqrt(x * x + y * y)
+  if (len > 0) {
+    return [x/len, y/len]
+  }
+  return [x,y]
+}
 
+/*
+local function normalize(x,y)
+	local l = len(x,y)
+	if l > 0 then
+		return x/l, y/l
+	end
+	return x,y
+end
 */

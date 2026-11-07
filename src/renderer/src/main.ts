@@ -49,7 +49,7 @@ class MainScene extends Phaser.Scene {
       this.bubbles.add(bubble)
     }
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1; i++) {
       const fishFoodTest = new FishFood(this)
       this.fishFood.add(fishFoodTest)
     }
