@@ -1,5 +1,5 @@
 import { Entity } from './Entity';
-import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum } from '../utils'
+import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool } from '../utils'
 import { FishFood } from './FishFood';
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 0.0
@@ -10,10 +10,23 @@ const textureKeys = [
   'smallFish', 'medFish', 'bigFish'
 ]
 
+const hungerTimes = [
+  10,
+  20,
+  30,
+]
+
+const maxHungerDieTimes = [
+  25,
+  50,
+  75,
+]
+
 enum FISH_STATES {
   WANDER,
   CHASE_FOOD,
-  SCAPE
+  SCAPE,
+  DIE
 }
 
 export class Fish extends Entity {
@@ -24,7 +37,7 @@ export class Fish extends Entity {
   public targetVelx: number
   public movementPatternTimer: number
 
-
+  private hungerTimer = 0.0
   private gotFlipedDir: number = 0
   private flipAngle: number = 0.0
   private turnAroundTimer: number = 0.0
@@ -50,7 +63,7 @@ export class Fish extends Entity {
     this.play(`${fishTextureKey}${fishSubtype}`, true)
 
     this.fishScale = 1
-    const size = 4 * (1+fishType)
+    const size = 5 * (1+fishType)
     this.setCircle(size)
     this.body?.setOffset(size,size)
   }
@@ -121,7 +134,7 @@ export class Fish extends Entity {
     })
   }
 
-  private handleAppearance(dt: number): void {
+  private handleLooking(dt: number): void {
     const velx = this.body!.velocity.x
     const vely = this.body!.velocity.y
     this.turnAroundTimer += dt
@@ -156,14 +169,29 @@ export class Fish extends Entity {
     }
   }
 
+  private tryDying(): boolean {
+    if (this.state === FISH_STATES.DIE) {return}
+    if (this.hungerTimer <= maxHungerDieTimes[this.fishType]) { return false }
+    this.state = FISH_STATES.DIE
+    this.targetVelx = 0.0
+    this.targetVely = 1.0
+    return true
+  }
+
   private wanderState(dt: number): void {
+    this.handleLooking(dt)
+
     if (this.targetEatFood !== null) {
+      this.targetVelx = 0.0
+      this.targetVely = 0.0
       this.state = FISH_STATES.CHASE_FOOD
       return
     } else {
-      const checkInt = round(this.age * 60 + this.id)
-      if (checkInt % 123 === 0) {
-        this.scanFood()
+      if (this.hungerTimer > hungerTimes[this.fishType]) {
+        const checkInt = round(this.age * 60 + this.id)
+        if (checkInt % 123 === 0) {
+          this.scanFood()
+        }
       }
     }
 
@@ -215,6 +243,8 @@ export class Fish extends Entity {
   }
 
   private chaseFoodState(dt: number): void {
+    this.handleLooking(dt)
+
     let gotox = -this.body!.position.x
     let gotoy = -this.body!.position.y
 
@@ -224,22 +254,43 @@ export class Fish extends Entity {
         this.state = FISH_STATES.WANDER
         return
       }
-      const offset = 32.0
+      const offset = 8.0
       gotox += this.targetEatFood.body!.position.x + rnum(-offset, offset)
       gotoy += this.targetEatFood.body!.position.y + rnum(-offset, offset)
     }
 
     const normal = normalize(gotox, gotoy)
-    const decayX = rnum(0.1, 1)
-    const decayY = rnum(0.1, 1)
+    const decayX = rnum(0.5, 2)
+    const decayY = rnum(0.5, 2)
     this.targetVelx = expDec(this.targetVelx, normal[0], decayX, dt, 0.000001)
     this.targetVely = expDec(this.targetVely, normal[1], decayY, dt, 0.000001)
-    const speedX = 48.0
-    const speedY = 48.0
+    const speedX = 52.0
+    const speedY = 52.0
     this.setVelocity(this.targetVelx*speedX, this.targetVely*speedY)
   }
 
+  private deadState(dt: number): void {
+    this.setVelocityX(0)
+
+    const multi = (this.targetVely > 3.0) && 0.5 || 1.0
+    this.targetVely += dt*multi
+    this.setVelocityY(this.targetVely * 4.0)
+
+    this.anims.timeScale = 0.0
+
+    this.setFlipY(true)
+
+    const { height} = this.scene.scale
+    if (this.body!.position.y > height) {
+      this.destroy()
+    }
+  }
+
   override thisupdate(dt: number): void {
+    const multi = randbool() && rpow(1.0, 0.75, 3) || rpow(1.0, 1.25, 3)
+    this.hungerTimer += dt * multi
+    this.tryDying()
+
     switch (this.state) {
       case FISH_STATES.WANDER:
         this.wanderState(dt)
@@ -248,14 +299,23 @@ export class Fish extends Entity {
         this.chaseFoodState(dt)
         break
       case FISH_STATES.SCAPE: break
+      case FISH_STATES.DIE:
+        this.deadState(dt)
+        break
     }
-
-    this.handleAppearance(dt)
   }
 
   onTouch(other: Entity): void {
-    if (this.targetEatFish === null) { return }
     if (other instanceof Fish) {
+      if (other !== this && false) {
+        let angle = angleTo(this.body!.position.x, this.body!.position.y, other.body!.position.x, other.body!.position.y)
+        const vec = fromPloar(angle, 0.0005)
+        this.setX(this.body!.position.x - vec[0])
+        this.setY(this.body!.position.y - vec[1])
+        //other.setX(other.body!.position.x + vec[0])
+        //other.setY(other.body!.position.y + vec[1])
+      }
+      if (this.targetEatFish === null) { return }
       if (other === this.targetEatFish && other !== this) {
         other.destroy()
       }
@@ -263,6 +323,13 @@ export class Fish extends Entity {
   }
 
   onTouchFishFood(food: FishFood): void {
+    if (this.state !== FISH_STATES.CHASE_FOOD) {return}
+    if (this.targetEatFood === null) {return}
+    if (this.targetEatFood !== food) {return}
+    if (!this.targetEatFood.active) { return }
+    if (!(food instanceof FishFood)) { return }
 
+    food.destroy()
+    this.hungerTimer = 0.0
   }
 }

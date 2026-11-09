@@ -64,15 +64,20 @@ class MainScene extends Phaser.Scene {
 
     const buttonSeparationX = 40
     new Button(this, 8, 8, "spawn", () => {
+      if (this.fishTypeIndex == 3) {
+        const fishFoodTest = new FishFood(this)
+        this.fishFood.add(fishFoodTest)
+        return
+      }
       //Argument of type 'string' is not assignable to parameter of type 'EnumFishTypes'. Wdym not it works just fine!!!!
       const fish = new Fish(this, width*0.5, height*0.5, this.fishTypeIndex, this.fishSubtypeIndex)
       this.fishes.add(fish)
     })
 
-    const typeNames = ['small', 'med', 'big']
+    const typeNames = ['small', 'med', 'big', 'food']
     const buttonFishType = new Button(this, 8+buttonSeparationX , 8, `${typeNames[this.fishTypeIndex]}`, () => {
       this.fishTypeIndex++
-      this.fishTypeIndex %= 3
+      this.fishTypeIndex %= 4
       buttonFishType.setText(`${typeNames[this.fishTypeIndex]}`)
     })
 

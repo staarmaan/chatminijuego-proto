@@ -16,7 +16,8 @@ export class FishFood extends Entity {
   public sinecosMoveAngle: number = 0.0
   public targetVel: number = 3.0
   public extraTargetVelY: number = rnum(0.65, 1.0)
-  public state: 0|1 = 0
+  public state: 0 | 1 = 0
+  public lifeTime: number = rnum(0.45, 1.0)
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0, 'fishFood')
@@ -124,5 +125,10 @@ export class FishFood extends Entity {
     }
     this.setAngle(this.angle + (this.body!.velocity.x * 0.1 * this.dir))
     this.clampToScreenXBorders()
+
+    this.lifeTime -= dt
+    if (this.lifeTime <= 0) {
+      this.destroy()
+    }
   }
 }
