@@ -32,6 +32,9 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     // default: do nothing; subclasses override
   }
 
+  getX(): number { return this.getCenter().x }
+  getY(): number { return this.getCenter().y }
+
   isOffScreen(offsetX = 0, offsetY = 0): boolean {
     const { width, height } = this.scene.scale
     return (

@@ -30,11 +30,8 @@ export const fromPloar = function (angle: number, radius = 1.0): number[] {
   return [cos(angle) * radius, sin(angle) * radius]
 }
 
-export const angleTo = function (x1: number, y1: number, x2?: number, y2?: number): number {
-  if (x2 && y2) {
-    return Math.atan2(y2-y1, x2-x1)
-  }
-  return Math.atan2(y1, x1)
+export const angleTo = function (x1: number, y1: number, x2 = x1*2, y2= y1*2): number {
+  return Math.atan2(y2-y1, x2-x1)
 }
 
 //Best range for decay is approx. 1 to 25. Decay changes pretty much exponentialy.
@@ -49,6 +46,10 @@ export const expDec = function (from: number, to: number, decay: number, dt: num
 
 export const rnum = function(a: number, b: number): number {
   return a + (b - a) * random()
+}
+
+export const randangle = function (): number {
+  return random()*Math.PI
 }
 
 export const rpow = function(a: number, b: number, n = 2): number {

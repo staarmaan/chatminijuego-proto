@@ -7,7 +7,7 @@ const sin = Math.sin
 const cos = Math.cos
 
 
-const MAX_LIFETIME = 14.25
+const MAX_LIFETIME = 60.0
 const FLOOR_Y_LEVEL_MIN = 262
 const FLOOR_Y_LEVEL_MAX = FLOOR_Y_LEVEL_MIN + 2
 
@@ -17,7 +17,7 @@ export class FishFood extends Entity {
   public targetVel: number = 3.0
   public extraTargetVelY: number = rnum(0.65, 1.0)
   public state: 0 | 1 = 0
-  public lifeTime: number = rnum(0.45, 1.0)
+  public lifeTime: number = rnum(0.45, 1.0)*MAX_LIFETIME
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0, 'fishFood')
