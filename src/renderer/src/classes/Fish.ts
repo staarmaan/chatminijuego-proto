@@ -1,7 +1,8 @@
 import { Entity } from './Entity';
-import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle } from '../utils'
+import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees } from '../utils'
 import { FishFood } from './FishFood';
 import { Particle } from './Particle';
+import { MainScene } from '../main';
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 0.0
 const MAX_MOVEMENT_PATTERN_SECONDS = 1.5
@@ -62,7 +63,7 @@ export class Fish extends Entity {
   private targetEatFood: FishFood | Fish | null = null //Puede ser FishFood o un Fish.
   private state: FISH_STATES = FISH_STATES.WANDER
 
-  constructor(scene: Phaser.Scene, x: number, y: number, fishType: number, fishSubtype: number) {
+  constructor(scene: MainScene, x: number, y: number, fishType: number, fishSubtype: number) {
     const fishTextureKey = textureKeys[fishType]
     super(scene, x, y, fishTextureKey)
 
@@ -186,7 +187,7 @@ export class Fish extends Entity {
       if (isFood && distanceSquared <= closestFoodSq) {
         closestFoodSq = distanceSquared
         closestFood = obj
-      } else if (isFish && wantsFish && distanceSquared <= closestFishSq) {
+      } else if (isFish && wantsFish && (distanceSquared <= closestFishSq) && this.fishType > obj.fishType) {
         closestFishSq = distanceSquared
         closestFish = obj
       }
@@ -410,18 +411,30 @@ export class Fish extends Entity {
         this.deadState(dt)
         break
     }
+
+    if (this.scene === undefined) {return}
+    if (this.scene.scale === undefined) {return}
+    const {width, height} = this.scene.scale
+    this.setPosition(
+      clamp(this.getX(), 0, width),
+      clamp(this.getY(), 0, height),
+    )
   }
 
   private doFishEatenBloodDust(x = this.getX(), y = this.getY()): void {
-    for (let i = 0; i < 6; i++){
-      const offset = fromPloar(randangle(), rpow(0.01, 12.0, 1.25))
-      const timeScale = rnum(10.0, 20.0)
-      const scale = rpow(0.333, 1.0, 1.5)
-      const parti = new Particle(this.scene, x+offset[0], y+offset[1], 'genericSmoke', 'genericSmokeDef', timeScale, scale, scale)
+    for (let i = 0; i < 12; i++){
+      const offset = fromPloar(randangle(), rnum(0.01, 10.0))
+      const timeScale = rnum(0.5, 2.0)
+      const scale = rnum(0.333, 1.0)
+      const parti = new Particle(this.scene, x+offset[0], y+offset[1], 'genericSmoke', 'genericSmokeDef', timeScale, scale, scale, randegrees())
 
-      const vel = fromPloar(randangle(), rpow(0.01, 52.0, 1.25))
+      const vel = fromPloar(randangle(), rpow(8.0, 64.0, 1.25))
+      parti.setVelocity(vel[0], vel[1])
+      parti.accelX = -vel[0]*8
+      parti.accelY = -200
 
-      this.setVelocity(vel[0], vel[1])
+      parti.setDepth(10)
+
       parti.setTint(0xff0000)
     }
   }

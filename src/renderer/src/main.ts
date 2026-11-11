@@ -6,11 +6,12 @@ import { Button } from './classes/Button'
 import { FishFood } from './classes/FishFood'
 import { Particle } from './classes/Particle'
 
-class MainScene extends Phaser.Scene {
-  private fishes!: Phaser.Physics.Arcade.Group
-  private bubbles!: Phaser.Physics.Arcade.Group
-  private fishFood!: Phaser.Physics.Arcade.Group
-  private particles!: Phaser.Physics.Arcade.Group
+export class MainScene extends Phaser.Scene {
+  public fishes!: Phaser.Physics.Arcade.Group
+  public bubbles!: Phaser.Physics.Arcade.Group
+  public fishFood!: Phaser.Physics.Arcade.Group
+  public particles!: Phaser.Physics.Arcade.Group
+
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
 
@@ -30,6 +31,7 @@ class MainScene extends Phaser.Scene {
     this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
     this.particles = this.physics.add.group({ classType: Particle, runChildUpdate: true })
     this.fishFood = this.physics.add.group({ classType: FishFood, runChildUpdate: true })
+
     this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
       if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
       (fish as Fish).onTouchFishFood(food as FishFood)

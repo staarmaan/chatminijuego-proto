@@ -52,6 +52,10 @@ export const randangle = function (): number {
   return random()*Math.PI
 }
 
+export const randegrees = function (): number {
+  return random()*360
+}
+
 export const rpow = function(a: number, b: number, n = 2): number {
   return a + (b - a) * pow(random(), n)
 }

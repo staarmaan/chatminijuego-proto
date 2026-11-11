@@ -70,7 +70,7 @@ export const createAnims = (scene: Phaser.Scene): void => {
       start: 0,
       end: 4,
     }),
-    frameRate: 1.0,
+    frameRate: 10,
     repeat: 0
   })
 }
