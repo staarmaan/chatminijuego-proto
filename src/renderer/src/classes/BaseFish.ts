@@ -1,55 +1,47 @@
-import { Entity } from './Entity';
+import { Entity } from './Entity'
 import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees } from '../utils'
-import { FishFood } from './FishFood';
-import { Particle } from './Particle';
-import { MainScene } from '../main';
+import { FishFood } from './FishFood'
+import { Particle } from './Particle'
+import type { MainScene } from '../main'
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 0.0
 const MAX_MOVEMENT_PATTERN_SECONDS = 1.5
 const random = Math.random
 
-const textureKeys = [
-  'smallFish', 'medFish', 'bigFish'
-]
-
-const maxHungerDieTimes = [
-  25,
-  50,
-  75,
-]
+export interface FishConfig {
+  readonly textureKey: string
+  readonly fishType: number
+  readonly hitRadius: number
+  readonly depth: number
+  readonly outPixelsX: number
+  readonly outPixelsY: number
+  readonly hungerTimes: readonly number[]
+  readonly fishHungerTimeRegain: readonly number[]
+  readonly hungerTickFrames: readonly number[]
+}
 
 enum HUNGER_LEVELS { FULL, FISH_FOOD, SMALL_FISH, MED_FISH }
-const hungerLevelList = [HUNGER_LEVELS.FULL, HUNGER_LEVELS.FISH_FOOD, HUNGER_LEVELS.SMALL_FISH, HUNGER_LEVELS.MED_FISH]
-
-const hungerTimes = [
-  [2.0, 14.0],
-  [2.0, 2.0, 20.0],
-  [10.0, 24.0, 25.0, 40.0],
-]
-const fishHungerTimeRegain = [
-  [12.5],
-  [7.5, 17.5],
-  [5.0, 12.5, 25.0],
-]
-const hungerTickFrames = [
-  [0, 10],
-  [0, 20, 10],
-  [0, 30, 20, 10],
-]
-
 
 enum FISH_STATES {
   WANDER,
   CHASE_FOOD,
   CHASE_FISH,
   SCAPE,
-  DEAD_HUNGER
+  DEAD_HUNGER,
+  EAT
 }
 
-export class Fish extends Entity {
+export enum FISH_SIZES {
+  SMALL,
+  MED,
+  BIG
+}
+
+export abstract class BaseFish extends Entity {
   public readonly fishType: number //El tipo define el tamaño. Deberia llamarlo fishScale.
   public readonly fishSubtype: number //Define solo la aperiencia (por ahora)
   public readonly fishScale: number
+  protected readonly config: FishConfig
   public targetVely: number
   public targetVelx: number
   public movementPatternTimer: number
@@ -60,44 +52,46 @@ export class Fish extends Entity {
   private flipAngle: number = 0.0
   private turnAroundTimer: number = 0.0
   private scanTimer: number = 0.0
-  private targetEatFood: FishFood | Fish | null = null //Puede ser FishFood o un Fish.
-  private state: FISH_STATES = FISH_STATES.WANDER
+  private targetEatFood: FishFood | BaseFish | null = null //Puede ser FishFood o un Fish.
+  private fishState: FISH_STATES = FISH_STATES.WANDER
+  private eatStateTimer: number = 0.0;
 
-  constructor(scene: MainScene, x: number, y: number, fishType: number, fishSubtype: number) {
-    const fishTextureKey = textureKeys[fishType]
-    super(scene, x, y, fishTextureKey)
+  constructor(scene: MainScene, x: number, y: number, fishSubtype: number, config: FishConfig) {
+    super(scene, x, y, config.textureKey)
 
+    this.config = config
     this.scanTimer = (this.id % 127) * 0.01
 
-    const baseDepth = 3
-    const typeDepth = 2 - fishType
-    this.setDepth(baseDepth + typeDepth)
+    this.setDepth(config.depth)
 
-    this.targetVelx = random()*2 - 1
-    this.targetVely = random()*2 - 1
+    this.targetVelx = random() * 2 - 1
+    this.targetVely = random() * 2 - 1
     this.movementPatternTimer = MIN_MOVEMENT_PATTERN_SECONDS + (random() * MAX_MOVEMENT_PATTERN_SECONDS)
 
-    this.fishType = fishType
+    this.fishType = config.fishType
     this.fishSubtype = fishSubtype
-    this.play(`${fishTextureKey}${fishSubtype}`, true)
+    this.play(`${config.textureKey}${fishSubtype}`, true)
 
     this.fishScale = 1
-    const size = 5 * (1+fishType)
+    const size = config.hitRadius
     this.setCircle(size)
-    this.body?.setOffset(size,size)
+    this.body?.setOffset(size, size)
   }
 
-  private eatFood(food: Fish | FishFood): void {
-    const isFish = food instanceof Fish
+  private eatFood(food: BaseFish | FishFood): void {
+    const isFish = food instanceof BaseFish
     if (isFish) {
-      if (this.fishType <= food.fishType) { return } //Un pez solo se come a otro si es mayor en tama;o (indicado por fishType)
+      if (this.fishType <= food.fishType) { return } //Un pez solo se come a otro si es mayor en tamaño (indicado por fishType)
     }
     food.destroy()
+
+    this.state = FISH_STATES.EAT
+    this.eatStateTimer = 0.0
 
     this.scanTimer = 0.0
 
     const regainIndex = (isFish && food.fishType) || 0
-    const remainder = this.hungerTimer - fishHungerTimeRegain[this.fishType][regainIndex]
+    const remainder = this.hungerTimer - this.config.fishHungerTimeRegain[regainIndex]
     if (remainder >= 0) {
       this.hungerTimer = remainder
       return
@@ -109,54 +103,8 @@ export class Fish extends Entity {
       this.hungerTimer = 0.0
       return
     }
-    const times = hungerTimes[this.fishType]
+    const times = this.config.hungerTimes
     this.hungerTimer = Math.max(0.0, times[this.hungerLevel] - Math.abs(remainder))
-  }
-
-  scapeFromBigFishes(range: number): void {
-    if (!this.targetEatFish?.active) { this.targetEatFish = null }
-    if (this.targetEatFish) { return }
-
-    const rangeSq = range * range
-    this.scene.children.each((other) => {
-      if (other instanceof Fish) {
-        if (!other.active) { return }
-        if (this.scale === other.scale) {return}
-        const dx = other.x - this.x
-        const dy = other.y - this.y
-        if ((dx*dx + dy*dy) > rangeSq) { return }
-
-        let gotoAngle = random()
-        const samePos = other.x == this.x && other.y == this.y
-
-        if (other.fishType > this.fishType) { //escape from bigger fish
-          if (!samePos) {
-            const angleOffset = (2*gotoAngle - 1) * 0.22
-            gotoAngle = angleTo(other.x, other.y, this.x, this.y) + angleOffset
-          }
-          this.anims.timeScale = 3.0
-          this.targetEatFish = null
-        } else {                                //go eat smaller fish
-          if (!samePos) {
-            gotoAngle = angleTo(this.x, this.y, other.x, other.y)
-          }
-          this.targetEatFish = other
-          this.anims.timeScale = 1.5
-          //this.currentSpeed = 0.0
-        }
-
-        //this.currentAngle = gotoAngle
-        //this.targetAngle = gotoAngle
-        //this.targetSpeed = 1.0
-      }
-    })
-    /*
-    return targets.filter((t) => {
-      if (!t.active) return false
-      const dx = t.x - this.x
-      const dy = t.y - this.y
-      return dx * dx + dy * dy <= rangeSq
-    })*/
   }
 
   private scanFood(): void {
@@ -170,14 +118,14 @@ export class Fish extends Entity {
 
     let closestFood: FishFood | null = null
     let closestFoodSq = rangeSq
-    let closestFish: Fish | null = null
+    let closestFish: BaseFish | null = null
     let closestFishSq = rangeSq
 
     this.scene.children.each((obj) => {
       if (!obj.active || obj === this) { return }
 
       const isFood = obj instanceof FishFood
-      const isFish = obj instanceof Fish
+      const isFish = obj instanceof BaseFish
       if (!isFood && !isFish) { return }
 
       const dx = obj.x - this.x
@@ -224,8 +172,8 @@ export class Fish extends Entity {
     this.flipAngle = expDec(this.flipAngle, 0.0, 12.5, dt, 0.0001)
 
     const halfSpeed = 12.0
-    const len2 = velx*velx + vely*vely
-    if (len2 > (halfSpeed*halfSpeed)) {
+    const len2 = velx * velx + vely * vely
+    if (len2 > (halfSpeed * halfSpeed)) {
       this.anims.timeScale = 1.0
     } else {
       this.anims.timeScale = 0.333
@@ -233,9 +181,9 @@ export class Fish extends Entity {
   }
 
   private tryBlinkFromHunger(): void {
-    const tick = round(this.age*60)
+    const tick = round(this.age * 60)
 
-    if (this.state === FISH_STATES.DEAD_HUNGER) {
+    if (this.fishState === FISH_STATES.DEAD_HUNGER) {
       const darkColor = 0xadadad
       this.setTint(darkColor)
       return
@@ -245,7 +193,7 @@ export class Fish extends Entity {
       return
     }
 
-    const frameThingy = hungerTickFrames[this.fishType][this.hungerLevel]
+    const frameThingy = this.config.hungerTickFrames[this.hungerLevel]
     if (tick % frameThingy == 0) {
       const redishColor = 0xff0000
       this.setTint(redishColor)
@@ -253,9 +201,8 @@ export class Fish extends Entity {
   }
 
   private dieOfHunger(): boolean {
-    if (this.state === FISH_STATES.DEAD_HUNGER) {return false}
-    //if (this.hungerTimer <= maxHungerDieTimes[this.fishType]) { return false }
-    this.state = FISH_STATES.DEAD_HUNGER
+    if (this.fishState === FISH_STATES.DEAD_HUNGER) { return false }
+    this.fishState = FISH_STATES.DEAD_HUNGER
     this.targetVelx = 0.0
     this.targetVely = 0.1
     this.flipAngle = 0.0
@@ -269,7 +216,7 @@ export class Fish extends Entity {
     if (this.targetEatFood !== null) {
       this.targetVelx = 0.0
       this.targetVely = 0.0
-      this.state = FISH_STATES.CHASE_FOOD
+      this.fishState = FISH_STATES.CHASE_FOOD
       return
     } else {
       if (this.hungerLevel > HUNGER_LEVELS.FULL) {
@@ -288,18 +235,18 @@ export class Fish extends Entity {
     if (this.movementPatternTimer > MAX_MOVEMENT_PATTERN_SECONDS) {
       this.movementPatternTimer = MIN_MOVEMENT_PATTERN_SECONDS + (random() * MAX_MOVEMENT_PATTERN_SECONDS)
 
-      const mode = round(random()*2)
+      const mode = round(random() * 2)
       switch (mode) {
         case 0:
-          this.targetVelx = random()*2 - 1
-          break;
+          this.targetVelx = random() * 2 - 1
+          break
         case 1:
-          this.targetVely = random()*2 - 1
-          break;
+          this.targetVely = random() * 2 - 1
+          break
         case 2:
-          this.targetVelx = random()*2 - 1
-          this.targetVely = random()*2 - 1
-          break;
+          this.targetVelx = random() * 2 - 1
+          this.targetVely = random() * 2 - 1
+          break
       }
     }
 
@@ -309,11 +256,11 @@ export class Fish extends Entity {
     this.setVelocityY(moveTo(this.body!.velocity.y, this.targetVely * speed, dt * accel))
 
     //Si esta cerca de los margenes de la pantalla, tratar de regresar al centro.
-    const outPixelsX = 24 + 8 * this.fishType
-    const outPixelsY = 40 + 24 + 8 * this.fishType
+    const outPixelsX = this.config.outPixelsX
+    const outPixelsY = this.config.outPixelsY
     if (this.isOffScreen(outPixelsX, outPixelsY)) {
       const { width, height } = this.scene.scale
-      const angleOffset = (2*random() - 1) * 1.001
+      const angleOffset = (2 * random() - 1) * 1.001
       const gotoAngle = angleTo(this.x, this.y, width * 0.5, height * 0.5) + angleOffset
       const vel = fromPloar(gotoAngle, rpow(1, 0, 8))
       this.targetVelx = vel[0]
@@ -336,10 +283,10 @@ export class Fish extends Entity {
     let gotoy = -this.body!.position.y
 
     if (this.targetEatFood !== null) {
-      const isDeadFish = (this.targetEatFood instanceof Fish) && (this.targetEatFood.state === FISH_STATES.DEAD_HUNGER)
+      const isDeadFish = (this.targetEatFood instanceof BaseFish) && (this.targetEatFood.fishState === FISH_STATES.DEAD_HUNGER)
       if (!this.targetEatFood.active || this.hungerLevel === HUNGER_LEVELS.FULL || isDeadFish) {
         this.targetEatFood = null
-        this.state = FISH_STATES.WANDER
+        this.fishState = FISH_STATES.WANDER
         return
       }
       const offset = 8.0
@@ -348,7 +295,7 @@ export class Fish extends Entity {
     }
     else
     {
-      this.state = FISH_STATES.WANDER
+      this.fishState = FISH_STATES.WANDER
       return
     }
 
@@ -359,7 +306,7 @@ export class Fish extends Entity {
     this.targetVely = expDec(this.targetVely, normal[1], decayY, dt, 0.000001)
     const speedX = 52.0
     const speedY = 52.0
-    this.setVelocity(this.targetVelx*speedX, this.targetVely*speedY)
+    this.setVelocity(this.targetVelx * speedX, this.targetVely * speedY)
   }
 
   private deadState(dt: number): void {
@@ -368,7 +315,7 @@ export class Fish extends Entity {
     this.setVelocityX(0)
 
     const multi = (this.targetVely > 3.0) && 0.5 || 1.0
-    this.targetVely += dt*multi
+    this.targetVely += dt * multi
     this.setVelocityY(this.targetVely * 4.0)
 
     this.anims.timeScale = 0.0
@@ -378,17 +325,32 @@ export class Fish extends Entity {
     this.flipAngle += this.targetVely * dt * dir * rotationSpeed
     this.setAngle(this.flipAngle)
 
-    const { height} = this.scene.scale
+    const { height } = this.scene.scale
     if (this.body!.position.y > height) {
       this.destroy()
     }
   }
 
+  private eatState(dt: number): void {
+    console.log('eat state')
+    this.setVelocity(0, 0)
+    this.targetVelx = 0
+    this.targetVely = 0
+    this.targetEatFood = null
+    this.anims.timeScale = 3.0
+    this.eatStateTimer += dt
+    if (this.eatStateTimer > 1.25) {
+      this.state = FISH_STATES.WANDER
+      this.anims.timeScale = 1.0
+      this.eatStateTimer = 0.0
+    }
+  }
+
   override thisupdate(dt: number): void {
-    if (this.state !== FISH_STATES.DEAD_HUNGER) {
+    if (this.fishState !== FISH_STATES.DEAD_HUNGER) {
       const multi = (randbool() && rpow(1.0, 0.75, 3)) || rpow(1.0, 1.25, 3.5)
       this.hungerTimer += dt * multi
-      const times = hungerTimes[this.fishType]
+      const times = this.config.hungerTimes
       if (this.hungerTimer > times[this.hungerLevel]) {
         this.hungerLevel++
         this.hungerTimer = 0
@@ -399,7 +361,7 @@ export class Fish extends Entity {
       this.tryBlinkFromHunger()
     }
 
-    switch (this.state) {
+    switch (this.fishState) {
       case FISH_STATES.WANDER:
         this.wanderState(dt)
         break
@@ -410,11 +372,14 @@ export class Fish extends Entity {
       case FISH_STATES.DEAD_HUNGER:
         this.deadState(dt)
         break
+      case FISH_STATES.EAT:
+        this.eatState(dt)
+        break
     }
 
-    if (this.scene === undefined) {return}
-    if (this.scene.scale === undefined) {return}
-    const {width, height} = this.scene.scale
+    if (this.scene === undefined) { return }
+    if (this.scene.scale === undefined) { return }
+    const { width, height } = this.scene.scale
     this.setPosition(
       clamp(this.getX(), 0, width),
       clamp(this.getY(), 0, height),
@@ -426,11 +391,11 @@ export class Fish extends Entity {
       const offset = fromPloar(randangle(), rnum(0.01, 10.0))
       const timeScale = rnum(0.5, 2.0)
       const scale = rnum(0.333, 1.0)
-      const parti = new Particle(this.scene, x+offset[0], y+offset[1], 'genericSmoke', 'genericSmokeDef', timeScale, scale, scale, randegrees())
+      const parti = new Particle(this.scene as MainScene, x + offset[0], y + offset[1], 'genericSmoke', 'genericSmokeDef', timeScale, scale, scale, randegrees())
 
       const vel = fromPloar(randangle(), rpow(8.0, 64.0, 1.25))
       parti.setVelocity(vel[0], vel[1])
-      parti.accelX = -vel[0]*8
+      parti.accelX = -vel[0] * 8
       parti.accelY = -200
 
       parti.setDepth(10)
@@ -439,16 +404,16 @@ export class Fish extends Entity {
     }
   }
 
-  onTouchFish(fish: Fish): void {
-    if (this.state === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
-    if (fish.state === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
+  onTouchFish(fish: BaseFish): void {
+    if (this.fishState === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
+    if (fish.fishState === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
 
     //Los pescados se empujan entre si, solo si el pescado tocado es del mismo tama;o (fishType) o si no es el pez fijado para comer o es la preza de otro pez.
     let allowPushing = false
     if (this.fishType === fish.fishType) {
       allowPushing = true
     } else {
-        if ((fish !== this.targetEatFood) && (this !== fish.targetEatFood)) {allowPushing = true}
+      if ((fish !== this.targetEatFood) && (this !== fish.targetEatFood)) { allowPushing = true }
     }
     if (allowPushing) {
       let angle = angleTo(this.getX(), this.getY(), fish.getX(), fish.getY())
@@ -463,24 +428,22 @@ export class Fish extends Entity {
       return
     }
 
-    if (this.state !== FISH_STATES.CHASE_FOOD) {return} //Tiene que estar en estado de persecucion.
-    if (this.targetEatFood === null) {return} //No comer si no tiene fijado a nada.
-    if (fish === this) {return} //Si por alguna razon, se toca asi mismo, no comer.
-    if (this.targetEatFood !== fish) {return} //No comer al Fish que no tenga fijado.
+    if (this.fishState !== FISH_STATES.CHASE_FOOD) { return } //Tiene que estar en estado de persecucion.
+    if (this.targetEatFood === null) { return } //No comer si no tiene fijado a nada.
+    if (fish === this) { return } //Si por alguna razon, se toca asi mismo, no comer.
+    if (this.targetEatFood !== fish) { return } //No comer al Fish que no tenga fijado.
     if (!this.targetEatFood.active) { return } //Si es el fijado correcto, pero no esta activo, no comer.
-    //if (!(fish instanceof Fish)) { return } //Tiene que ser Fish.
 
     this.eatFood(fish) //En esta funcion se destruye el pescado comido.
     this.doFishEatenBloodDust(fish.getX(), fish.getY())
   }
 
   onTouchFishFood(food: FishFood): void {
-    if (this.state !== FISH_STATES.CHASE_FOOD) {return} //Tiene que estar en estado de persecucion.
-    if (this.targetEatFood === null) {return} //No comer si no tiene fijado a nada.
-    if (this.targetEatFood !== food) {return} //No comer al FishFood que no tenga fijado.
+    if (this.fishState !== FISH_STATES.CHASE_FOOD) { return } //Tiene que estar en estado de persecucion.
+    if (this.targetEatFood === null) { return } //No comer si no tiene fijado a nada.
+    if (this.targetEatFood !== food) { return } //No comer al FishFood que no tenga fijado.
     if (!this.targetEatFood.active) { return } //Si es el fijado correcto, pero no esta activo, no comer.
-    //if (!(food instanceof FishFood)) { return } //Tiene que ser FishFood.
 
-    this.eatFood(food) //En esta funcion se destruye el pescado comido.
+    this.eatFood(food) //En esta funcion se destruye el fishfood comido.
   }
 }

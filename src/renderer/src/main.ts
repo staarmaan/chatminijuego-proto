@@ -1,10 +1,11 @@
 import Phaser from 'phaser'
 import { preloadAnims, createAnims } from './assets/anims'
-import { Fish } from './classes/Fish'
+import { BaseFish, createFish } from './classes/FishFactory'
 import { BubbleParticle } from './classes/BubbleParticle'
 import { Button } from './classes/Button'
 import { FishFood } from './classes/FishFood'
 import { Particle } from './classes/Particle'
+import EnumFishTypes from './classes/EnumFishTypes'
 
 export class MainScene extends Phaser.Scene {
   public fishes!: Phaser.Physics.Arcade.Group
@@ -22,10 +23,10 @@ export class MainScene extends Phaser.Scene {
   create(): void {
     createAnims(this)
 
-    this.fishes = this.physics.add.group({ classType: Fish, runChildUpdate: true })
+    this.fishes = this.physics.add.group({ runChildUpdate: true })
     this.physics.add.overlap(this.fishes, this.fishes, (a, b) => {
       if (a === b) return
-      (a as Fish).onTouchFish(b as Fish)
+      ;(a as unknown as BaseFish).onTouchFish(b as unknown as BaseFish)
     })
 
     this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
@@ -34,7 +35,7 @@ export class MainScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
       if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
-      (fish as Fish).onTouchFishFood(food as FishFood)
+      ;(fish as unknown as BaseFish).onTouchFishFood(food as unknown as FishFood)
     })
 
     const { width, height } = this.sys.game.config as { width: number; height: number };
@@ -45,7 +46,7 @@ export class MainScene extends Phaser.Scene {
     hud.setDepth(100)
 
     for (let i = 0; i < 6; i++) {
-      const fish = new Fish(this, width*0.5, height*0.5, 0, i)
+      const fish = createFish(this, width * 0.5, height * 0.5, 0, i)
       this.fishes.add(fish)
     }
 
@@ -74,8 +75,7 @@ export class MainScene extends Phaser.Scene {
         this.fishFood.add(fishFoodTest)
         return
       }
-      //Argument of type 'string' is not assignable to parameter of type 'EnumFishTypes'. Wdym not it works just fine!!!!
-      const fish = new Fish(this, width*0.5, height*0.5, this.fishTypeIndex, this.fishSubtypeIndex)
+      const fish = createFish(this, width * 0.5, height * 0.5, this.fishTypeIndex, this.fishSubtypeIndex)
       this.fishes.add(fish)
     })
 
@@ -135,7 +135,7 @@ export class MainScene extends Phaser.Scene {
 
     const x = 200 + (Math.random() * 40 - 20)
     const y = 400 + (Math.random() * 40 - 20)
-    const fish = new Fish(this, x, y, fishType, scale)
+    const fish = createFish(this, x, y, fishType, scale)
     this.fishes.add(fish)
   }
 
