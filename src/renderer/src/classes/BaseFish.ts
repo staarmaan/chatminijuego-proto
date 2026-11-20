@@ -10,7 +10,7 @@ const random = Math.random
 
 export interface FishConfig {
   readonly textureKey: string
-  readonly fishType: number
+  readonly fishSize: FISH_SIZES
   readonly hitRadius: number
   readonly depth: number
   readonly outPixelsX: number
@@ -38,7 +38,7 @@ export enum FISH_SIZES {
 }
 
 export abstract class BaseFish extends Entity {
-  public readonly fishType: number //El tipo define el tamaño. Deberia llamarlo fishScale.
+  public readonly fishSize: FISH_SIZES
   public readonly fishSubtype: number //Define solo la aperiencia (por ahora)
   public readonly fishScale: number
   protected readonly config: FishConfig
@@ -68,7 +68,7 @@ export abstract class BaseFish extends Entity {
     this.targetVely = random() * 2 - 1
     this.movementPatternTimer = MIN_MOVEMENT_PATTERN_SECONDS + (random() * MAX_MOVEMENT_PATTERN_SECONDS)
 
-    this.fishType = config.fishType
+    this.fishSize = config.fishSize
     this.fishSubtype = fishSubtype
     this.play(`${config.textureKey}${fishSubtype}`, true)
 
@@ -81,16 +81,16 @@ export abstract class BaseFish extends Entity {
   private eatFood(food: BaseFish | FishFood): void {
     const isFish = food instanceof BaseFish
     if (isFish) {
-      if (this.fishType <= food.fishType) { return } //Un pez solo se come a otro si es mayor en tamaño (indicado por fishType)
+      if (this.fishSize <= food.fishSize) { return } //Un pez solo se come a otro si es mayor en tamaño (indicado por fishSize)
     }
     food.destroy()
 
-    this.state = FISH_STATES.EAT
+    this.fishState = FISH_STATES.EAT
     this.eatStateTimer = 0.0
 
     this.scanTimer = 0.0
 
-    const regainIndex = (isFish && food.fishType) || 0
+    const regainIndex = isFish ? food.fishSize : 0
     const remainder = this.hungerTimer - this.config.fishHungerTimeRegain[regainIndex]
     if (remainder >= 0) {
       this.hungerTimer = remainder
@@ -135,7 +135,7 @@ export abstract class BaseFish extends Entity {
       if (isFood && distanceSquared <= closestFoodSq) {
         closestFoodSq = distanceSquared
         closestFood = obj
-      } else if (isFish && wantsFish && (distanceSquared <= closestFishSq) && this.fishType > obj.fishType) {
+      } else if (isFish && wantsFish && (distanceSquared <= closestFishSq) && this.fishSize > obj.fishSize) {
         closestFishSq = distanceSquared
         closestFish = obj
       }
@@ -332,15 +332,18 @@ export abstract class BaseFish extends Entity {
   }
 
   private eatState(dt: number): void {
-    console.log('eat state')
-    this.setVelocity(0, 0)
+    const vely = Math.cos(this.eatStateTimer * 33.321)*28.321
+    this.setVelocity(0, vely)
+
     this.targetVelx = 0
     this.targetVely = 0
     this.targetEatFood = null
     this.anims.timeScale = 3.0
+
     this.eatStateTimer += dt
-    if (this.eatStateTimer > 1.25) {
-      this.state = FISH_STATES.WANDER
+    if (this.eatStateTimer > 0.5) {
+      this.setVelocity(0, 0)
+      this.fishState = FISH_STATES.WANDER
       this.anims.timeScale = 1.0
       this.eatStateTimer = 0.0
     }
@@ -348,7 +351,7 @@ export abstract class BaseFish extends Entity {
 
   override thisupdate(dt: number): void {
     if (this.fishState !== FISH_STATES.DEAD_HUNGER) {
-      const multi = (randbool() && rpow(1.0, 0.75, 3)) || rpow(1.0, 1.25, 3.5)
+      const multi = (randbool() && rpow(1.0, 0.75, 1.5)) || rpow(1.0, 1.25, 3.5)
       this.hungerTimer += dt * multi
       const times = this.config.hungerTimes
       if (this.hungerTimer > times[this.hungerLevel]) {
@@ -408,9 +411,9 @@ export abstract class BaseFish extends Entity {
     if (this.fishState === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
     if (fish.fishState === FISH_STATES.DEAD_HUNGER) { return } //No tocar a un pescado muerto de hambre.
 
-    //Los pescados se empujan entre si, solo si el pescado tocado es del mismo tama;o (fishType) o si no es el pez fijado para comer o es la preza de otro pez.
+    //Los pescados se empujan entre si, solo si el pescado tocado es del mismo tama;o (fishSize) o si no es el pez fijado para comer o es la preza de otro pez.
     let allowPushing = false
-    if (this.fishType === fish.fishType) {
+    if (this.fishSize === fish.fishSize) {
       allowPushing = true
     } else {
       if ((fish !== this.targetEatFood) && (this !== fish.targetEatFood)) { allowPushing = true }
@@ -418,7 +421,7 @@ export abstract class BaseFish extends Entity {
     if (allowPushing) {
       let angle = angleTo(this.getX(), this.getY(), fish.getX(), fish.getY())
       if (angle === 0) { angle = randangle() }
-      const pushVel = 0.5 / (this.fishType + 1)
+      const pushVel = 0.5 / (this.fishSize + 1)
       const vec = fromPloar(angle, pushVel)
 
       this.setPosition(

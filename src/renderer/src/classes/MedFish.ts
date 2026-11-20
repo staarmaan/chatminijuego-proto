@@ -1,9 +1,9 @@
 import type { MainScene } from '../main'
-import { BaseFish, type FishConfig } from './BaseFish'
+import { BaseFish, FISH_SIZES, type FishConfig } from './BaseFish'
 
 const CONFIG = {
   textureKey: 'medFish',
-  fishType: 1,
+  fishSize: FISH_SIZES.MED,
   hitRadius: 10,
   depth: 4,
   outPixelsX: 32,

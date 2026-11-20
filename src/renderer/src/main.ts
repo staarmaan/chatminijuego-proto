@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { preloadAnims, createAnims } from './assets/anims'
-import { BaseFish, createFish } from './classes/FishFactory'
+import { BaseFish, createFish, FISH_SIZES } from './classes/FishFactory'
 import { BubbleParticle } from './classes/BubbleParticle'
 import { Button } from './classes/Button'
 import { FishFood } from './classes/FishFood'
@@ -46,7 +46,7 @@ export class MainScene extends Phaser.Scene {
     hud.setDepth(100)
 
     for (let i = 0; i < 6; i++) {
-      const fish = createFish(this, width * 0.5, height * 0.5, 0, i)
+      const fish = createFish(this, width * 0.5, height * 0.5, FISH_SIZES.SMALL, i)
       this.fishes.add(fish)
     }
 
@@ -55,7 +55,7 @@ export class MainScene extends Phaser.Scene {
       this.bubbles.add(bubble)
     }
 
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < 32; i++) {
       const fishFoodTest = new FishFood(this)
       this.fishFood.add(fishFoodTest)
     }
@@ -75,7 +75,9 @@ export class MainScene extends Phaser.Scene {
         this.fishFood.add(fishFoodTest)
         return
       }
-      const fish = createFish(this, width * 0.5, height * 0.5, this.fishTypeIndex, this.fishSubtypeIndex)
+      const fishSizes = [FISH_SIZES.SMALL, FISH_SIZES.MED, FISH_SIZES.BIG]
+      const fishSize = fishSizes[this.fishTypeIndex] ?? FISH_SIZES.SMALL
+      const fish = createFish(this, width * 0.5, height * 0.5, fishSize, this.fishSubtypeIndex)
       this.fishes.add(fish)
     })
 
@@ -135,7 +137,10 @@ export class MainScene extends Phaser.Scene {
 
     const x = 200 + (Math.random() * 40 - 20)
     const y = 400 + (Math.random() * 40 - 20)
-    const fish = createFish(this, x, y, fishType, scale)
+    let fishSize = FISH_SIZES.SMALL
+    if (fishType === 1) fishSize = FISH_SIZES.MED
+    else if (fishType === 2) fishSize = FISH_SIZES.BIG
+    const fish = createFish(this, x, y, fishSize, scale)
     this.fishes.add(fish)
   }
 
