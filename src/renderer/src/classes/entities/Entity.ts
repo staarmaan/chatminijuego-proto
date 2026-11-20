@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
-import { Timer } from './Timer'
-import { StateMachine } from './StateMachine'
+import { Timer } from '../Timer'
+import { StateMachine } from '../StateMachine'
+import { MainScene } from '../../main'
 
 let nextId = 0
 
@@ -10,12 +11,14 @@ type EntityFilter = (entity: Entity) => boolean
 export class Entity extends Phaser.Physics.Arcade.Sprite {
   private ageTime: number = 0 //Cuenta el tiempo que tiene activo (en segundos, claro). No es modificable.
   public timeCount: number = 0 //Cuenta el tiempo que tiene activo (en segundos, claro). A diferencia de ageTime lo puedes modificar a tu necesidad.
+  public tickCount: number = 0
+  private tickCountTimer: number = 0
   public readonly id: number //Numero entero unico para esta entidad.
   public stateMachine = new StateMachine() //Se actualiza despues de thisupdate.
   public timer = new Timer() //Se actualiza despues de thisupdate.
+  public scene!: MainScene
 
-
-  constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame?: number) {
+  constructor(scene: MainScene, x: number, y: number, texture: string, frame?: number) {
     super(scene, x, y, texture, frame)
     scene.physics.add.existing(this)
 
@@ -40,6 +43,10 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
 
     this.ageTime += dt
     this.timeCount += dt
+    this.tickCountTimer += dt
+    if (this.tickCountTimer > (1 / 60)) {
+      this.tickCount++
+    } //1/60 porque es el framerate default.
   }
 
   thisupdate(dt: number): void {}
@@ -74,11 +81,11 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     if (this.y > height-offset) {this.setY(height-offset)}
   }
 
-  public getNearestEntity(scene: Phaser.Scene, range=0, extraFilter?: EntityFilter): Entity|null {
+  public getNearestEntity(group: Phaser.Physics.Arcade.Group, range=180, extraFilter?: EntityFilter): Entity|null {
     let closestEntity: Entity | null = null
     let closestRangeSquared = range*range
 
-    scene.children.each((entity) => {
+    group.children.forEach((entity) => {
       //Hacer algunas validaciones para considerarlo en el each.
       const isNotEntityClass = !(entity instanceof Entity)
       if ( isNotEntityClass || !entity.active || entity === this ) { return }

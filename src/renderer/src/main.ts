@@ -6,9 +6,11 @@ import { Button } from './classes/Button'
 import { FishFood } from './classes/FishFood'
 import { Particle } from './classes/Particle'
 import EnumFishTypes from './classes/EnumFishTypes'
+import { Fish } from './classes/entities/Fiish'
 
 export class MainScene extends Phaser.Scene {
   public fishes!: Phaser.Physics.Arcade.Group
+  public fiishes!: Phaser.Physics.Arcade.Group
   public bubbles!: Phaser.Physics.Arcade.Group
   public fishFood!: Phaser.Physics.Arcade.Group
   public particles!: Phaser.Physics.Arcade.Group
@@ -24,15 +26,19 @@ export class MainScene extends Phaser.Scene {
     createAnims(this)
 
     this.fishes = this.physics.add.group({ runChildUpdate: true })
-    this.physics.add.overlap(this.fishes, this.fishes, (a, b) => {
-      if (a === b) return
-      ;(a as unknown as BaseFish).onTouchFish(b as unknown as BaseFish)
-    })
-
+    this.fiishes = this.physics.add.group({ runChildUpdate: true })
     this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
     this.particles = this.physics.add.group({ classType: Particle, runChildUpdate: true })
     this.fishFood = this.physics.add.group({ classType: FishFood, runChildUpdate: true })
 
+    this.physics.add.overlap(this.fishes, this.fishes, (a, b) => {
+      if (a === b) return
+      ;(a as unknown as BaseFish).onTouchFish(b as unknown as BaseFish)
+    })
+    this.physics.add.overlap(this.fiishes, this.fiishes, (a, b) => {
+      if (a === b) return
+      ;(a as unknown as Fish).onTouchFish(b as unknown as Fish)
+    })
     this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
       if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
       ;(fish as unknown as BaseFish).onTouchFishFood(food as unknown as FishFood)

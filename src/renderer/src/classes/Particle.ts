@@ -1,5 +1,5 @@
 import { MainScene } from "../main";
-import { Entity } from "./Entity";
+import { Entity } from "./entities/Entity";
 
 export class Particle extends Entity {
   public accelX = 0

@@ -1,4 +1,4 @@
-import { Entity } from './Entity';
+import { Entity } from './entities/Entity';
 import { moveTo, clamp, angleTo, rpow, rnum, expDec, round, randbool } from '../utils'
 
 const random = Math.random

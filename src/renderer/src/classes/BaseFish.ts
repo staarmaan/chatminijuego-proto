@@ -1,4 +1,4 @@
-import { Entity } from './Entity'
+import { Entity } from './entities/Entity'
 import { moveTo, fromPloar, angleTo, rp ow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees } from '../utils'
 import { FishFood } from './FishFood'
 import { Particle } from './Particle'

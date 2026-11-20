@@ -72,6 +72,10 @@ export const randbool = function (): boolean {
   return random() > 0.5
 }
 
+export const randsign = function (): 1|-1 {
+    return randbool() && 1 || -1
+}
+
 export const normalize = function (x: number, y: number): number[] {
   const len = sqrt(x * x + y * y)
   if (len > 0) {
