@@ -6,6 +6,7 @@ import medFishSheet from './images/fishes/medFishes.png'
 import bubbleParticleSheet from './images/bubbleParticle.png'
 import fishFoodSheet from './images/fishFood.png'
 import genericSmokeSheet from './images/fx/genericSmoke.png'
+import { newFishSheets } from './newFishSheets'
 
 export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.image('bg', bg)
@@ -15,6 +16,13 @@ export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.spritesheet('bubbleParticle', bubbleParticleSheet, { frameWidth: 7, frameHeight: 7 })
   scene.load.spritesheet('fishFood', fishFoodSheet, { frameWidth: 5, frameHeight: 5 })
   scene.load.spritesheet('genericSmoke', genericSmokeSheet, { frameWidth: 16, frameHeight: 16 })
+
+  for (const sheet of newFishSheets) {
+    scene.load.spritesheet(sheet.key, sheet.url, {
+      frameWidth: sheet.frameWidth,
+      frameHeight: sheet.frameHeight
+    })
+  }
 }
 
 export const createAnims = (scene: Phaser.Scene): void => {
@@ -40,6 +48,20 @@ export const createAnims = (scene: Phaser.Scene): void => {
       frameRate: 7,
       repeat: -1
     })
+  }
+
+  for (const sheet of newFishSheets) {
+    for (let size = 0; size < sheet.frameCount; size++) {
+      scene.anims.create({
+        key: `${sheet.key}-size${size}`,
+        frames: scene.anims.generateFrameNumbers(sheet.key, {
+          start: size,
+          end: size
+        }),
+        frameRate: 10,
+        repeat: -1
+      })
+    }
   }
 
   scene.anims.create({

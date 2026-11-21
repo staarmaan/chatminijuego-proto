@@ -7,6 +7,7 @@ import { FishFood } from './classes/FishFood'
 import { Particle } from './classes/Particle'
 import EnumFishTypes from './classes/EnumFishTypes'
 import { Fish } from './classes/entities/Fiish'
+import { TankData } from './classes/TankData'
 
 export class MainScene extends Phaser.Scene {
   public fishes!: Phaser.Physics.Arcade.Group
@@ -14,6 +15,8 @@ export class MainScene extends Phaser.Scene {
   public bubbles!: Phaser.Physics.Arcade.Group
   public fishFood!: Phaser.Physics.Arcade.Group
   public particles!: Phaser.Physics.Arcade.Group
+
+  public tankData: TankData = new TankData()
 
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0

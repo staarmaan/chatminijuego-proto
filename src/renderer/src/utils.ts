@@ -85,6 +85,32 @@ export const normalize = function (x: number, y: number): number[] {
 }
 
 /*
+Ejemplo de uso:
+const pick = weightedChoice({ cat: 10, dog: 5, frog: 0 }) // Tendra mas chance de elegir cat sobre dog. Nunca se eligira frog.
+*/
+export function weightedChoice<K extends string | number>(
+  weights: Record<K, number>
+): K {
+  const entries = Object.entries(weights) as [K, number][]
+
+  let sum = 0
+  for (const [, w] of entries) {
+    //if (w < 0) throw new Error("weight value less than zero")
+    sum += max(0, w)
+  }
+  if (sum === 0) throw new Error("all weights are zero in weightedChoice call. At least one key needs a greather than 0 number!!")
+
+  let rnd = random() * sum // lume.random(sum): float in [0, sum)
+  let last = entries[0][0]
+  for (const [key, w] of entries) {
+    if (w > 0) last = key
+    if (rnd < w) return key
+    rnd -= w
+  }
+  return last // only reachable through floating-point rounding
+}
+
+/*
 local function normalize(x,y)
 	local l = len(x,y)
 	if l > 0 then
