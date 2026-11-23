@@ -4,6 +4,7 @@ import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randb
 import { Food } from "./Food";
 import { CorpseFish } from "./foods/corpseFish";
 
+const abs = Math.abs
 const cos = Math.cos
 const sin = Math.sin
 
@@ -18,7 +19,8 @@ export type eatPriorities = {food:number, smallFish:number, medFish:number, bigF
 export class Fish extends Entity {
   //Stats
   public life = 1.0
-  public hunger = 1.0 //Porentage que va de 0.0 a 1.0.
+  public hunger = 1.0 //Porentage que va de 1.0 y decrementa por lossHungerPerSecond (por segundo) hasta llegar a 0.0.
+  public lossHungerPerSecond = 0.01 //Decrementa hunger en porcentage por segundo.
   public evolutionTimeCount = 0.0
   public defense = 1.0 //Porentage. Mientras mas bajo, menos daño recive y vsiceversa.
   public dmg = 0.251 //Cantidad que se restara al life de otro pescado al atacar.
@@ -54,6 +56,8 @@ export class Fish extends Entity {
     this.fishSize = fishSize
     this.username = username
 
+    this.play(`${this.fishTexture}-size${this.fishSize}`)
+
     this.clampHorizontally(10)
 
     const circleRadius = (fishSize+1)*5.0
@@ -62,6 +66,7 @@ export class Fish extends Entity {
 
     this.startTurnAroundTimer()
     this.startInitialFoodSearchTimer()
+    this.startStarveDamageTimer()
 
     this.stateMachine
       .autoRegister('spawn', this)
@@ -148,14 +153,15 @@ export class Fish extends Entity {
   }
 
   searchToGetTargetFood():void {
-    const food = this.getNearestEntity(this.scene.fishFood, 120)
+    const food = this.getNearestEntity(this.scene.food, 120)
     if (food === null) {return}
+    if (!(food instanceof Food)) {return} //Siempre deberia ser true. Lo pongo para que me deje de dar warning el IDE.
     this.targetFood = food
   }
   searchToGetTargetFish():void {
     const fish = this.getNearestEntity(this.scene.fiishes, 180)
-    if (!(fish instanceof Fish)) {return} //Siempre deberia ser true. Lo pongo para que me deje de dar warning el IDE.
     if (fish === null) {return}
+    if (!(fish instanceof Fish)) {return} //Siempre deberia ser true. Lo pongo para que me deje de dar warning el IDE.
     this.targetFish = fish
   }
 
@@ -196,7 +202,7 @@ export class Fish extends Entity {
   }
 
   fillHunger(percentAdd: number): void {
-    this.hunger = clamp(this.hunger + percentAdd, 0, 1)
+    this.hunger = clamp(this.hunger + abs(percentAdd), 0, 1)
   }
 
   /*
@@ -204,8 +210,11 @@ export class Fish extends Entity {
   Para que pueda atacarlo, debe tener en blanco a el mismo pez que toco.
   */
   tryAttackFish(otherFish: Fish): void {
+    if (!this.isHungryForFish()) {return}
     if (this.targetFish === null) {return}
     if (otherFish !== this.targetFish) { return }
+    if (!this.stateMachine.isOn('chase')) {return}
+    this.stateMachine.simpleSwitch(this, 'attack')
     otherFish.onAttackedByFish(this)
     otherFish.getDamaged(this.dmg, otherFish.defense)
   }
@@ -215,6 +224,7 @@ export class Fish extends Entity {
   Para que pueda atacarlo, debe tener en blanco a la misma comida que toco.
   */
   tryBiteFood(food: Food): void {
+    if (!this.isHungryForFood()) {return}
     if (this.targetFood === null) {return}
     if (food !== this.targetFood) { return }
     food.getBitenByFish(this)
@@ -225,16 +235,24 @@ export class Fish extends Entity {
   }
 
   isHungryForFish(): boolean {
-    return this.hunger <= 0.333333
+    return this.hunger <= 0.333
   }
 
   startInitialFoodSearchTimer(): void {
     this.timer.after(rnum(0, 4), () => {
       this.timer.every(1.5678987654321, () => {
-        if (!this.isHungryForFish() && !this.isHungryForFood()) {return}
         if (!this.stateMachine.isOn('wander')) { return }
-        this.searchToGetTargetFood()
-        this.searchToGetTargetFish()
+        if (this.isHungryForFood()) { this.searchToGetTargetFood() }
+        if (this.isHungryForFish()) { this.searchToGetTargetFish() }
+      })
+    })
+  }
+
+  startStarveDamageTimer(): void {
+    this.timer.after(rnum(0, 4), () => {
+      this.timer.every(1.05, () => {
+        if (this.hunger > 0) { return }
+        this.getDamaged(this.starveDmg)
       })
     })
   }
@@ -314,11 +332,11 @@ export class Fish extends Entity {
     this.timeCount = -rnum(MIN_MOVEMENT_PATTERN_SECONDS, MAX_MOVEMENT_PATTERN_SECONDS)
   }
   wanderUpdate(dt: number): void {
-    if (this.targetFish !== null) {
+    if (this.targetFish !== null && this.isHungryForFish()) {
       this.chooseToScapeOrChaseFish(this.targetFish)
       return
     }
-    if (this.targetFood !== null) {
+    if (this.targetFood !== null && this.isHungryForFood()) {
       this.stateMachine.simpleSwitch(this, 'chase')
       return
     }
@@ -397,7 +415,7 @@ export class Fish extends Entity {
     this.setVelocityX( expDec(velx, 0, decay, dt, 0.1) )
     this.setVelocityY(expDec(vely, 0, decay, dt, 0.1))
 
-    if (this.stateMachine.getTime() <= 0.5) { return }
+    if (this.stateMachine.getTime() <= 0.25) { return }
 
     if (this.targetFish === null) {
       this.stateMachine.simpleSwitch(this, 'wander')
@@ -435,15 +453,17 @@ export class Fish extends Entity {
     let targetX = this.getX()
     let targetY = this.getY()
 
-    if (this.targetFish !== null) { //Le da prioridad a los pezcados antes que la cmoida.
+    if (this.targetFish !== null && this.isHungryForFish()) { //Le da prioridad a los pescados antes que la comida, pero solo si todavia quiere comer pescado.
       targetX = this.targetFish.getX()
       targetY = this.targetFish.getY()
-    } else if (this.targetFood !== null) {
+
+      if (this.justTicked && (this.tickCount % 44 == 0)) {
+        this.targetFish.onTargetedByFish(this)
+      } //esto seria alrededor de cada 0.7333
+    } else if (this.targetFood !== null && this.isHungryForFood()) {
       targetX = this.targetFood.getX()
       targetY = this.targetFood.getY()
-    }
-
-    if ( (this.targetFood === null) && (this.targetFish === null) ) {
+    } else {
       this.stateMachine.simpleSwitch(this, 'wander')
       return
     }
@@ -491,8 +511,6 @@ export class Fish extends Entity {
     this.handleAnimationAngles(dt)
     this.doSwimmingWavingAnimation(dt)
 
-    this.play(`${this.fishTexture}-size${this.fishSize}`)
-
     this.clampHorizontally(10)
     //El clampeo vertical solo se aplica si no esta spawneando.
     if (!this.stateMachine.isOn('spawn')) {
@@ -501,5 +519,8 @@ export class Fish extends Entity {
 
     if (!this.targetFood?.active) {this.targetFood = null}
     if (!this.targetFish?.active) {this.targetFish = null}
+
+    this.hunger = clamp(this.hunger - abs(this.lossHungerPerSecond * dt), 0, 1)
+    this.evolutionTimeCount += dt
   }
 }

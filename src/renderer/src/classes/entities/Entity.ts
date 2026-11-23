@@ -12,6 +12,7 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
   private ageTime: number = 0 //Cuenta el tiempo que tiene activo (en segundos, claro). No es modificable.
   public timeCount: number = 0 //Cuenta el tiempo que tiene activo (en segundos, claro). A diferencia de ageTime lo puedes modificar a tu necesidad.
   public tickCount: number = 0
+  public justTicked = false
   private tickCountTimer: number = 0
   public readonly id: number //Numero entero unico para esta entidad.
   public stateMachine = new StateMachine() //Se actualiza despues de thisupdate.
@@ -44,12 +45,14 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     this.ageTime += dt
     this.timeCount += dt
     this.tickCountTimer += dt
+      this.justTicked = false
     if (this.tickCountTimer > (1 / 60)) {
       this.tickCount++
+      this.justTicked = true
     } //1/60 porque es el framerate default.
   }
 
-  thisupdate(dt: number): void {}
+  thisupdate(dt: number): void {return}
 
   onTouch(_other: Entity): void {
     // default: do nothing; subclasses override
