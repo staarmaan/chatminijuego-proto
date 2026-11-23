@@ -70,18 +70,21 @@ export class Food extends Entity {
     */
   }
 
-  getBitenByFish(fish:Fish|null, hits = 1): void {
+  getBitenByFish(fish: Fish | null, hits = 1): void {
+    if (!this.active) return
+
     const multi = 1.0 + rpow(0, 0.4, 2) * randsign()
     this.hits -= abs(hits) * multi
+
+    if (fish !== null) {
+      fish.fillHunger(this.hungerPercentAdd)
+      fish.onFoodBite(this)
+    }
 
     if (this.hits <= 0) {
       this.onDie()
       this.destroy()
     }
-
-    if (fish === null) {return}
-    fish.fillHunger(this.hungerPercentAdd)
-    fish.onFoodBite(this)
   }
 
   //Funciones de los estados
@@ -118,7 +121,7 @@ export class Food extends Entity {
     this.angleForWaterMovement += dt*rpow(0, 1, 1.5)
     this.setVelocityX(cos(this.angleForWaterMovement)*3.0*this.moveDirX)
 
-    const y = this.body!.position.y
+    const y = this.getY()
     if (y > FLOOR_Y_LEVEL_MAX) {
       this.targetVelY = -1.0
     }
@@ -131,7 +134,7 @@ export class Food extends Entity {
     const nextVely = moveTo(vely, this.targetVelY*speed, rnum(1,5)*dt)
     this.setVelocityY(nextVely)
 
-    this.anims.timeScale = abs(this.targetVelY) * 0.2
+    this.anims.timeScale = abs(vely) * 0.02
   }
 
 }

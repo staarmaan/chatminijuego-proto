@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
 import { preloadAnims, createAnims } from './assets/anims'
-import { BaseFish, createFish, FISH_SIZES } from './classes/FishFactory'
+import { BaseFish, createFish, FISH_SIZES } from './classes/deprecated/FishFactory'
 import { BubbleParticle } from './classes/BubbleParticle'
 import { Button } from './classes/Button'
-import { FishFood } from './classes/FishFood'
+import { FishFood } from './classes/deprecated/FishFood'
 import { Particle } from './classes/Particle'
 import EnumFishTypes from './classes/EnumFishTypes'
 import { Fish } from './classes/entities/Fiish'
@@ -17,7 +17,7 @@ export class MainScene extends Phaser.Scene {
   public fishFood!: Phaser.Physics.Arcade.Group
   public particles!: Phaser.Physics.Arcade.Group
 
-  public tankData: TankData = new TankData()
+  public tankData: TankData = new TankData(this)
 
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0

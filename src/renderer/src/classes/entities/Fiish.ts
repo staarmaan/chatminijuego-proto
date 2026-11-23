@@ -79,10 +79,10 @@ export class Fish extends Entity {
     this.stateMachine.simpleSwitch(this, 'spawn')
   }
 
-  override destroy(): void {
+  override destroy(fromScene?: boolean): void {
     this.timer.clear()
     this.scene.tankData.incrementAliveFishCount(-1)
-    super.destroy();
+    super.destroy(fromScene);
   }
 
   //Funciones de animacion procedural.
@@ -277,7 +277,7 @@ export class Fish extends Entity {
 
   /*
   Ejecutado desde Food.ts cuando le da una mordidad a una instancia de Food.
-  OJO, que es posible que food ya este destruido en la funcion si este recibio un bocado mortal, ya que primero muere antes de llamar onFoodBite.
+  Este se llama antes de que el food se destruya por morir de hits, por lo que incluso cuando llega a 0 de vida (osea food.hits), todavia seguira vivo solo en esta funcion.
   */
   onFoodBite(food: Food): void {return}
 
@@ -433,11 +433,11 @@ export class Fish extends Entity {
       return
     }
 
-    let gotox = this.body!.position.x
-    let gotoy = this.body!.position.y
+    let gotox = this.getX()
+    let gotoy = this.getY()
     const offset = 24
-    gotox -= this.targetFish.body!.position.x + rnum(-offset, offset)
-    gotoy -= this.targetFish.body!.position.y + rnum(-offset, offset)
+    gotox -= this.targetFish.getX() + rnum(-offset, offset)
+    gotoy -= this.targetFish.getY() + rnum(-offset, offset)
 
     const normal = normalize(gotox, gotoy)
     const decayX = rnum(2.5, 4.5)
@@ -450,8 +450,8 @@ export class Fish extends Entity {
   }
 
   chaseUpdate(dt: number): void {
-    let targetX = this.getX()
-    let targetY = this.getY()
+    let targetX: number //= this.getX()
+    let targetY: number //= this.getY()
 
     if (this.targetFish !== null && this.isHungryForFish()) { //Le da prioridad a los pescados antes que la comida, pero solo si todavia quiere comer pescado.
       targetX = this.targetFish.getX()
@@ -468,8 +468,8 @@ export class Fish extends Entity {
       return
     }
 
-    let gotox = -this.body!.position.x
-    let gotoy = -this.body!.position.y
+    let gotox = -this.getX()
+    let gotoy = -this.getY()
     const offset = 6
     gotox += targetX + rnum(-offset, offset)
     gotoy += targetY + rnum(-offset, offset)

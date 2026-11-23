@@ -35,6 +35,11 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
 
   public getAge(): number {return this.ageTime}
 
+  override destroy(fromScene?: boolean): void {
+    this.timer.clear()
+    super.destroy(fromScene)
+  }
+
   override update(_time: number, delta: number): void {
     const dt = delta * 0.001
     this.thisupdate(dt)

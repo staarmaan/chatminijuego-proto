@@ -1,5 +1,5 @@
-import { Entity } from './entities/Entity';
-import { moveTo, clamp, angleTo, rpow, rnum, expDec, round, randbool } from '../utils'
+import { Entity } from '../entities/Entity';
+import { moveTo, clamp, angleTo, rpow, rnum, expDec, round, randbool } from '../../utils'
 
 const random = Math.random
 const abs = Math.abs

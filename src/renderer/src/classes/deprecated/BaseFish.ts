@@ -1,8 +1,8 @@
-import { Entity } from './entities/Entity'
-import { moveTo, fromPloar, angleTo, rp ow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees } from '../utils'
+import { Entity } from '../entities/Entity'
+import { moveTo, fromPloar, angleTo, rp ow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees } from '../../utils'
 import { FishFood } from './FishFood'
-import { Particle } from './Particle'
-import type { MainScene } from '../main'
+import { Particle } from '../Particle'
+import type { MainScene } from '../../main'
 
 const MIN_MOVEMENT_PATTERN_SECONDS = 0.0
 const MAX_MOVEMENT_PATTERN_SECONDS = 1.5
