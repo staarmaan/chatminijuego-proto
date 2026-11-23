@@ -12,8 +12,10 @@ export class HudFishCounter extends Phaser.GameObjects.Container {
   constructor(scene: MainScene, x: number, y: number) {
     super(scene, x, y);
 
-    const frameWidth = 15
-    const texture = 'bigNumbersDefault'
+    this.setDepth(101)
+
+    const frameWidth = 10
+    const texture = 'bigNumbers'
     for (let i = 0; i < this.digitCount; i++) {
       const sprite = scene.add.sprite(i * frameWidth, 0, texture, 0);
       this.digits.push(sprite);

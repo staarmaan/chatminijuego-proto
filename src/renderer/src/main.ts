@@ -7,48 +7,67 @@ import { FishFood } from './classes/deprecated/FishFood'
 import { Particle } from './classes/Particle'
 import EnumFishTypes from './classes/EnumFishTypes'
 import { Fish } from './classes/entities/Fiish'
+import { Food } from './classes/entities/Food'
+import { Croqueta } from './classes/entities/foods/croqueta'
+import { SwordFishSmall } from './classes/entities/fishes/swordFish/swordFishSmall'
 import { TankData } from './classes/TankData'
 import { HudFishCounter } from './classes/hud/HudFishCounter'
 
+import waterHealthIcon from './assets/images/hud/waterHealthIcon.png'
+import waterHealthAntena from './assets/images/hud/waterHealthAntena.png'
+import waterHealthArch from './assets/images/hud/waterHealthArch.png'
+import { moveTo } from './utils'
+
+
 export class MainScene extends Phaser.Scene {
-  public fishes!: Phaser.Physics.Arcade.Group
   public fiishes!: Phaser.Physics.Arcade.Group
+  public food!: Phaser.Physics.Arcade.Group
   public bubbles!: Phaser.Physics.Arcade.Group
-  public fishFood!: Phaser.Physics.Arcade.Group
   public particles!: Phaser.Physics.Arcade.Group
 
-  public tankData: TankData = new TankData(this)
+  public tankData!: TankData
 
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
 
-  public fishCounter: HudFishCounter = new HudFishCounter(this, 8, 16)
+  private waterHealthAntenaImage!: Phaser.GameObjects.Image
+
+  public fishCounter!: HudFishCounter
 
   preload(): void {
     preloadAnims(this)
+
+    this.load.image('waterHealthIcon', waterHealthIcon);
+    this.load.image('waterHealthAntena', waterHealthAntena);
+    this.load.image('waterHealthArch', waterHealthArch);
   }
 
   create(): void {
     createAnims(this)
 
-    this.fishes = this.physics.add.group({ runChildUpdate: true })
-    this.fiishes = this.physics.add.group({ runChildUpdate: true })
+    this.add.image(97, 8, 'waterHealthArch').setDepth(101).setOrigin(0,0)
+    this.waterHealthAntenaImage = this.add.image(130, 27, 'waterHealthAntena').setDepth(102).setOrigin(0.925925, 0.5)
+    this.add.image(121, 20, 'waterHealthIcon').setDepth(103).setOrigin(0,0)
+
+    this.fishCounter = new HudFishCounter(this, 16, 25 )
+    this.tankData = new TankData(this)
+
+    this.fiishes = this.physics.add.group({ classType: Fish, runChildUpdate: true })
+    this.fiishes.defaults = {} as Phaser.Types.Physics.Arcade.PhysicsGroupDefaults
+    this.food = this.physics.add.group({ classType: Food, runChildUpdate: true })
+    this.food.defaults = {} as Phaser.Types.Physics.Arcade.PhysicsGroupDefaults
     this.bubbles = this.physics.add.group({ classType: BubbleParticle, runChildUpdate: true })
     this.particles = this.physics.add.group({ classType: Particle, runChildUpdate: true })
-    this.fishFood = this.physics.add.group({ classType: FishFood, runChildUpdate: true })
 
-    this.physics.add.overlap(this.fishes, this.fishes, (a, b) => {
-      if (a === b) return
-      ;(a as unknown as BaseFish).onTouchFish(b as unknown as BaseFish)
-    })
+
     this.physics.add.overlap(this.fiishes, this.fiishes, (a, b) => {
       if (a === b) return
       ;(a as unknown as Fish).onTouchFish(b as unknown as Fish)
     })
-    this.physics.add.overlap(this.fishes, this.fishFood, (fish, food) => {
-      if (fish === food) return //No creo que sea necesario esto, pero por si acaso.
-      ;(fish as unknown as BaseFish).onTouchFishFood(food as unknown as FishFood)
+    this.physics.add.overlap(this.fiishes, this.food, (fish, foodObj) => {
+      ;(fish as unknown as Fish).onTouchFood(foodObj as unknown as Food)
     })
+
 
     const { width, height } = this.sys.game.config as { width: number; height: number };
     const bg = this.add.image(width*0.5, height*0.5, 'bg');
@@ -57,19 +76,21 @@ export class MainScene extends Phaser.Scene {
     hud.setDisplaySize(width, height);
     hud.setDepth(100)
 
-    for (let i = 0; i < 6; i++) {
-      const fish = createFish(this, width * 0.5, height * 0.5, FISH_SIZES.SMALL, i)
-      this.fishes.add(fish)
+    for (let i = 0; i < 10; i++) {
+      //const x = Phaser.Math.Between(16, width - 16)
+      const croqueta = new Croqueta(this)
+      this.food.add(croqueta)
     }
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 10; i++) {
+      //const x = Phaser.Math.Between(16, width - 16)
+      const fish = new SwordFishSmall(this, undefined, undefined)
+      this.fiishes.add(fish)
+    }
+
+    for (let i = 0; i < 12; i++) {
       const bubble = new BubbleParticle(this)
       this.bubbles.add(bubble)
-    }
-
-    for (let i = 0; i < 32; i++) {
-      const fishFoodTest = new FishFood(this)
-      this.fishFood.add(fishFoodTest)
     }
 
     const scene = this
@@ -80,6 +101,7 @@ export class MainScene extends Phaser.Scene {
       })
     }
 
+    /*
     const buttonSeparationX = 40
     new Button(this, 8, 8, "spawn", () => {
       if (this.fishTypeIndex == 3) {
@@ -106,6 +128,7 @@ export class MainScene extends Phaser.Scene {
       this.fishSubtypeIndex %= smallTypeCount
       buttonFishSubtype.setText(`${this.fishSubtypeIndex}`)
     })
+    */
   }
 
   private spawnFishFromPayload(payload: any): void {
@@ -157,9 +180,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(_time: number, _delta: number): void {
-    //const dt = _delta * 0.001
+    const dt = _delta * 0.001
     //const tiempo = _time * 0.001
 
+    this.waterHealthAntenaImage.setAngle(
+      moveTo(this.waterHealthAntenaImage.angle, this.tankData.getWaterContaminationPercentage()*170, 5*dt)
+    )
 
 
     /*for (let i = 0; i < 5; i++) {} */
@@ -171,7 +197,7 @@ new Phaser.Game({
   width: 160,
   height: 320,
   scale: {
-      mode: Phaser.Scale.FIT, // Fits the game inside the parent/window
+    mode: Phaser.Scale.FIT, // Fits the game inside the parent/window
   },
   parent: 'app',
   pixelArt: true,

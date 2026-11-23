@@ -97,6 +97,7 @@ export class StateMachine {
 
   /** Calls the current state's update function, if it has one, and advances its timer. */
   update(entity: unknown, dt: number): void {
+    if (this._count === 0) {return}
     const state = this._states.get(this._current);
     if (!state) throw new Error(`${this._current} state doesnt exits, on update`);
 
@@ -136,4 +137,4 @@ export class StateMachine {
   }
 }
 
-export default State;
+export default StateMachine;

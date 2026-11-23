@@ -17,11 +17,10 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
   public readonly id: number //Numero entero unico para esta entidad.
   public stateMachine = new StateMachine() //Se actualiza despues de thisupdate.
   public timer = new Timer() //Se actualiza despues de thisupdate.
-  public scene!: MainScene
+  declare public scene: MainScene
 
   constructor(scene: MainScene, x: number, y: number, texture: string, frame?: number) {
     super(scene, x, y, texture, frame)
-    scene.physics.add.existing(this)
 
     this.id = nextId
     nextId++
@@ -83,7 +82,7 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
     if (this.x > width-offset) {this.setX(width-offset)}
   }
   //Al ser llamada, mantiene a la entidad adentro de la pantalla. Un offset positivo reduce el espacio en el que se mantiene, y uno negativo lo aumenta hacia por fuera de la pantalla. El offseet es 80 por defecto ya que el tamaño del area "jugable" es de 240 pixeles, pero el tamaño de la resolucion vertical del juego es 320.
-  public clampVertically(offset = 80): void {
+  public clampVertically(offset = 40): void {
     const { height } = this.scene.scale
     if (this.y < offset) {this.setY(offset)}
     if (this.y > height-offset) {this.setY(height-offset)}

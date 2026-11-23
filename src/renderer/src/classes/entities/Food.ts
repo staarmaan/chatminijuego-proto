@@ -25,7 +25,7 @@ export class Food extends Entity {
 
   public username: string
 
-  constructor(scene: MainScene, hits:number, circleRadius: number, contaminateFrequency: number, texture: string, username="noname", x = rnum(0, scene.scale.width), y = -8) {
+  constructor(scene: MainScene, hits:number, circleRadius: number, contaminateFrequency: number, texture: string, username="noname", x = rnum(0, scene.scale.width), y = 32) {
     super(scene, x, y, texture)
 
     this.hits = hits
@@ -51,6 +51,7 @@ export class Food extends Entity {
   startContaminateTimer(): void {
     this.timer.after(rnum(1.5, 3.5), () => {
       this.timer.every(this.contaminateFrequency, () => {
+        if (this.stateMachine.isOn('float')){return}
         this.onContaminate()
       })
     })
@@ -102,7 +103,8 @@ export class Food extends Entity {
     } else {
       this.targetVelY = moveTo(this.targetVelY, rnum(0.05, 2.5), rnum(0.01, 8) * dt)
     }
-    this.anims.timeScale = this.targetVelY
+
+    this.clampHorizontally(-3)
 
     this.angleForWaterMovement += dt
     const SPEED_X = 16.0
@@ -129,12 +131,13 @@ export class Food extends Entity {
       this.targetVelY = 1.0
     }
 
+    this.clampHorizontally(0)
+    this.clampVertically(0)
+
     const vely = this.body!.velocity.y
     const speed = rnum(0.01, 1.0) * 16
     const nextVely = moveTo(vely, this.targetVelY*speed, rnum(1,5)*dt)
     this.setVelocityY(nextVely)
-
-    this.anims.timeScale = abs(vely) * 0.02
   }
 
 }

@@ -1,10 +1,13 @@
 import { MainScene } from "../main"
+import { clamp } from "../utils"
 
 type entityHistorySlot = { username: string, id:number, texture:string, frame:number }
 
 const max = Math.max
 const min = Math.min
 const abs = Math.abs
+
+const CONTAMINATION_EXTRA_HUNGER_LOSS = 2.0
 
 /*
 Esta hecho para ser un singleton que centralice algunos datos que afectarian a las entidades globalmente o para simplemente para almacenar datos especificos, como
@@ -21,8 +24,12 @@ export class TankData {
     this.scene = scene
   }
 
-  contaminateWater(percent: number):void { min(1, this.waterContaminationPercentage += abs(percent)) }
-  cureWater(percent: number):void { max(0, this.waterContaminationPercentage -= abs(percent)) }
+  contaminateWater(percent: number):void { clamp(this.waterContaminationPercentage += abs(percent), 0, 1) }
+  cureWater(percent: number):void { clamp(this.waterContaminationPercentage -= abs(percent),0,1) }
+
+  getExtraHungerLossPercentFromContamination():number {
+    return 1 + Math.pow(this.waterContaminationPercentage, CONTAMINATION_EXTRA_HUNGER_LOSS+1)*CONTAMINATION_EXTRA_HUNGER_LOSS
+  }
 
   incrementAliveFishCount(amount = 1): void {
     this.aliveFishCount += amount
