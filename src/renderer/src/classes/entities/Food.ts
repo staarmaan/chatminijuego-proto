@@ -13,20 +13,23 @@ const FLOOR_Y_LEVEL_MAX = FLOOR_Y_LEVEL_MIN + 3
 
 export class Food extends Entity {
   public readonly moveDirX = randsign()
-  public life = 0.00001
-  public hungerPercentAdd = 0.1975
-  public contaminationLifeLoss = 1
-  public contaminationPercentAdd = 0.02
+  public hits:number
+  public readonly initHits: number
+  public hungerPercentAdd = 0.15
+  public contaminationLifeLoss = 1 //Entero.
+  public contaminationPercentAdd = 0.01
   public contaminateFrequency = 12.5
   public currentContaminationFase = 0
-  public maxContaminationFase = 1
   public targetVelY = rpow(2.0, 6.0, 3)
   public angleForWaterMovement = randangle()
 
   public username: string
 
-  constructor(scene: MainScene, x = rnum(0, scene.scale.width), y = -8, circleRadius: number, contaminateFrequency: number, username="noname", texture: string) {
+  constructor(scene: MainScene, hits:number, circleRadius: number, contaminateFrequency: number, texture: string, username="noname", x = rnum(0, scene.scale.width), y = -8) {
     super(scene, x, y, texture)
+
+    this.hits = hits
+    this.initHits = hits
 
     this.clampHorizontally(10)
 
@@ -58,22 +61,25 @@ export class Food extends Entity {
   onContaminate(): void {
     this.scene.tankData.contaminateWater(this.contaminationPercentAdd)
     this.currentContaminationFase++
-    if (this.currentContaminationFase >= this.maxContaminationFase) {
+    this.getBitenByFish(null, this.contaminationLifeLoss)
+    /*
+    if ((this.currentContaminationFase >= this.maxContaminationFase) || (this.hits <= 0)) {
       this.onDie()
       this.destroy()
     }
+    */
   }
 
-  getBitenByFish(dmg: number, fish:Fish): void {
-    const multi = 1.0 + rpow(0, 0.1, 2) * randsign()
-    this.life -= dmg * multi
+  getBitenByFish(fish:Fish|null, hits = 1): void {
+    const multi = 1.0 + rpow(0, 0.4, 2) * randsign()
+    this.hits -= abs(hits) * multi
 
-
-    if (this.life <= 0) {
+    if (this.hits <= 0) {
       this.onDie()
       this.destroy()
     }
 
+    if (fish === null) {return}
     fish.fillHunger(this.hungerPercentAdd)
     fish.onFoodBite(this)
   }

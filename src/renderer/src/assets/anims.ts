@@ -7,6 +7,8 @@ import bubbleParticleSheet from './images/bubbleParticle.png'
 import fishFoodSheet from './images/fishFood.png'
 import genericSmokeSheet from './images/fx/genericSmoke.png'
 import { newFishSheets } from './newFishSheets'
+import bigNumbers from './images/hud/bigNumbers.png'
+import smallNumbers from './images/hud/smallNumbers.png'
 
 export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.image('bg', bg)
@@ -16,6 +18,8 @@ export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.spritesheet('bubbleParticle', bubbleParticleSheet, { frameWidth: 7, frameHeight: 7 })
   scene.load.spritesheet('fishFood', fishFoodSheet, { frameWidth: 5, frameHeight: 5 })
   scene.load.spritesheet('genericSmoke', genericSmokeSheet, { frameWidth: 16, frameHeight: 16 })
+  scene.load.spritesheet('bigNumbers', bigNumbers, { frameWidth: 15, frameHeight: 20 })
+  scene.load.spritesheet('smallNumbers', smallNumbers, { frameWidth: 20, frameHeight: 20 })
 
   for (const sheet of newFishSheets) {
     scene.load.spritesheet(sheet.key, sheet.url, {
@@ -94,5 +98,37 @@ export const createAnims = (scene: Phaser.Scene): void => {
     }),
     frameRate: 10,
     repeat: 0
+  })
+
+  scene.anims.create({
+    key: `bigNumbersDefault`,
+    frames: scene.anims.generateFrameNumbers('bigNumbers', {
+      start: 0,
+      end: 9,
+    }),
+    duration: 4294967296,
+    repeat: -1
+  })
+
+  scene.anims.create({
+    key: `smallNumbersThin`,
+    frames: scene.anims.generateFrameNumbers('smallNumbers', {
+      start: 0,
+      end: 9,
+    }), duration: 4294967296, repeat: -1
+  })
+  scene.anims.create({
+    key: `smallNumbersThick`,
+    frames: scene.anims.generateFrameNumbers('smallNumbers', {
+      start: 10,
+      end: 19,
+    }), duration: 4294967296, repeat: -1
+  })
+  scene.anims.create({
+    key: `smallNumbersIcons`,
+    frames: scene.anims.generateFrameNumbers('smallNumbers', {
+      start: 20,
+      end: 22,
+    }), duration: 4294967296, repeat: -1
   })
 }

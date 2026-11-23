@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import type { MainScene } from '../../main'
 import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees, randsign } from '../../utils'
 import { Food } from "./Food";
+import { CorpseFish } from "./foods/corpseFish";
 
 const cos = Math.cos
 const sin = Math.sin
@@ -11,8 +12,6 @@ export enum FISH_SIZES {
   MED,
   BIG
 }
-
-const SPAWN_STATE_TIME = 2.5
 
 export type eatPriorities = {food:number, smallFish:number, medFish:number, bigFish:number}
 
@@ -49,6 +48,8 @@ export class Fish extends Entity {
   constructor(scene: MainScene, x = rnum(0, scene.scale.width), y = -24, fishSize: FISH_SIZES, username="noname", texture: string) {
     super(scene, x, y, texture)
 
+    this.scene.tankData.incrementAliveFishCount(1)
+
     this.fishTexture = texture
     this.fishSize = fishSize
     this.username = username
@@ -71,6 +72,12 @@ export class Fish extends Entity {
       .autoRegister('hurt', this)
       .autoRegister('evolve', this)
     this.stateMachine.simpleSwitch(this, 'spawn')
+  }
+
+  override destroy(): void {
+    this.timer.clear()
+    this.scene.tankData.incrementAliveFishCount(-1)
+    super.destroy();
   }
 
   //Funciones de animacion procedural.
@@ -106,7 +113,7 @@ export class Fish extends Entity {
   }
   private handleAnimationAngles(dt: number): void {
     const hurtShakeAngle = rpow(this.hurtShakingAngle, 0, 2) * randsign()
-    this.setAngle(this.defaultAngle + this.turnAroundAngle + this.movementAngle + hurtShakeAngle + this.movementAngle)
+    this.setAngle(this.defaultAngle + this.turnAroundAngle + hurtShakeAngle + this.movementAngle)
 
     this.handleMovementAngle(dt)
     this.hurtShakingAngle = expDec(this.hurtShakingAngle, 0.0, 8.5, dt, 0.0001)
@@ -170,9 +177,10 @@ export class Fish extends Entity {
   }
 
   die(): void {
-    this.timer.clear()
-    this.destroy()
     //spawn corpse
+    const corpse = new CorpseFish(this)
+    this.onDie(corpse)
+    this.destroy()
   }
 
   getDamaged(dmg: number, defense = 1): void {
@@ -192,13 +200,24 @@ export class Fish extends Entity {
   }
 
   /*
-  Llamado siempre que toca a otro pez diferente
+  Llamado siempre que toca a otro pez.
+  Para que pueda atacarlo, debe tener en blanco a el mismo pez que toco.
   */
   tryAttackFish(otherFish: Fish): void {
     if (this.targetFish === null) {return}
     if (otherFish !== this.targetFish) { return }
+    otherFish.onAttackedByFish(this)
     otherFish.getDamaged(this.dmg, otherFish.defense)
+  }
 
+  /*
+  Llamado siempre que toca una comida.
+  Para que pueda atacarlo, debe tener en blanco a la misma comida que toco.
+  */
+  tryBiteFood(food: Food): void {
+    if (this.targetFood === null) {return}
+    if (food !== this.targetFood) { return }
+    food.getBitenByFish(this)
   }
 
   isHungryForFood(): boolean {
@@ -222,6 +241,16 @@ export class Fish extends Entity {
 
   //Funciones de "eventos".
 
+  /*
+  Todavia no se destruye cuando se llama esta funcion. Hecha para ser sobre-escrita.
+  */
+  onDie(corpse: CorpseFish | null = null): void { return }
+
+  onTouchFood(food: Food): void {
+    //if (food === this) {return} //No deberia pasar, pero por si acaso.
+    this.tryBiteFood(food)
+  }
+
   onTouchFish(otherFish: Fish): void {
     if (otherFish === this) {return} //No deberia pasar, pero por si acaso.
     this.pushAgainstFish(otherFish)
@@ -229,7 +258,7 @@ export class Fish extends Entity {
   }
 
   /*
-  Ejecutado cuando le da una mordidad a una instancia de Food.
+  Ejecutado desde Food.ts cuando le da una mordidad a una instancia de Food.
   OJO, que es posible que food ya este destruido en la funcion si este recibio un bocado mortal, ya que primero muere antes de llamar onFoodBite.
   */
   onFoodBite(food: Food): void {return}
@@ -254,12 +283,11 @@ export class Fish extends Entity {
   }
 
   /*
-  Por defecto, al ser atacado por otro pez, cambia al estado hurt. Recomiendo dejarlo asi, la verdad.
-  //Por defecto, al ser atacado por otro pez, puede optar por escapar si es mas pequeño que el atacante o de otro modo perseguirlo.
+  Se llama antes que getDamaged cuando es tocado por un pez y atacado.
   */
   onAttackedByFish(otherFish: Fish): void {
     this.targetFish = otherFish
-    this.chooseToScapeOrChaseFish(otherFish)
+    //this.chooseToScapeOrChaseFish(otherFish)
   }
 
   //Funciones de estados.
@@ -387,8 +415,8 @@ export class Fish extends Entity {
       return
     }
 
-    let gotox = -this.body!.position.x
-    let gotoy = -this.body!.position.y
+    let gotox = this.body!.position.x
+    let gotoy = this.body!.position.y
     const offset = 24
     gotox -= this.targetFish.body!.position.x + rnum(-offset, offset)
     gotoy -= this.targetFish.body!.position.y + rnum(-offset, offset)
@@ -466,6 +494,7 @@ export class Fish extends Entity {
     this.play(`${this.fishTexture}-size${this.fishSize}`)
 
     this.clampHorizontally(10)
+    //El clampeo vertical solo se aplica si no esta spawneando.
     if (!this.stateMachine.isOn('spawn')) {
       this.clampVertically(10)
     } //Esto es especificamente asi para que el pescado, al spawnear, baje desde la interfaz y parezca que cayo desde arriba.

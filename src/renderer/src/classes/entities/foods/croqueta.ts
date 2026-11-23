@@ -3,10 +3,10 @@ import { rnum, round } from "../../../utils";
 import { Food } from "../Food";
 
 export class Croqueta extends Food {
-  constructor(scene: MainScene, x = rnum(0, scene.scale.width), y = -8, username = "noname") {
+  constructor(scene: MainScene, username = "noname", x = rnum(0, scene.scale.width), y = -8) {
     const circleRadius = 2.0
-    const contaminateAddPercent = 0.01
-    super(scene, x, y, circleRadius, contaminateAddPercent, username, 'fishFood')
+    const contaminateFrequency = rnum(15,30)
+    super(scene, 1, circleRadius, contaminateFrequency, 'fishFood', username, x, y)
 
     const type = round(rnum(0,3))
     this.play(`fishFood${type}`)

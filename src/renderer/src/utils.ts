@@ -110,6 +110,13 @@ export function weightedChoice<K extends string | number>(
   return last // only reachable through floating-point rounding
 }
 
+export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+export function invLerp(a: number, b: number, value: number): number {
+  if (a === b) return 0; // avoid division by zero
+  return (value - a) / (b - a);
+}
+
 /*
 local function normalize(x,y)
 	local l = len(x,y)

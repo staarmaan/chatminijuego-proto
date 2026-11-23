@@ -8,6 +8,7 @@ import { Particle } from './classes/Particle'
 import EnumFishTypes from './classes/EnumFishTypes'
 import { Fish } from './classes/entities/Fiish'
 import { TankData } from './classes/TankData'
+import { HudFishCounter } from './classes/hud/HudFishCounter'
 
 export class MainScene extends Phaser.Scene {
   public fishes!: Phaser.Physics.Arcade.Group
@@ -20,6 +21,8 @@ export class MainScene extends Phaser.Scene {
 
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
+
+  public fishCounter: HudFishCounter = new HudFishCounter(this, 8, 16)
 
   preload(): void {
     preloadAnims(this)
