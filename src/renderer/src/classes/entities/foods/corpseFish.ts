@@ -6,7 +6,7 @@ export class CorpseFish extends Food {
   constructor(fish: Fish) {
     const fishSize = fish.fishSize
 
-    const hits = 10 + (10 * fishSize)
+    const hits = 10 + (5 * fishSize)
     const circleRadius = 4.0 * (fishSize + 1)
     const contaminateFrequency = rnum(10,20)
     super(fish.scene, hits, circleRadius, contaminateFrequency, fish.fishTexture, fish.username, fish.x, fish.y)
@@ -16,8 +16,8 @@ export class CorpseFish extends Food {
     this.velxMulti = 0.25
 
     this.contaminationLifeLoss = 5
-    this.contaminationPercentAdd = 0.05 + (0.05 * fishSize)
-    this.hungerPercentAdd = 0.2 + (0.05 * fishSize)
+    this.contaminationPercentAdd = 0.05 + (0.01 * fishSize)
+    this.hungerPercentAdd = 0.05 + (0.05 * fishSize)
 
     this.anims.timeScale = 0.0
     this.setDepth(0.01)

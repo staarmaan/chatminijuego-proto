@@ -87,7 +87,7 @@ export class Fish extends Entity {
 
     this.clampHorizontally(10)
 
-    const circleRadius = (fishSize+1)*5.0
+    const circleRadius = 5.0 + (fishSize*3.0)
     this.setCircle(circleRadius)
     const offset = 24 - circleRadius
     this.body?.setOffset(offset, offset)
@@ -566,7 +566,7 @@ export class Fish extends Entity {
     const maxTime = 1.333
     const percent = invLerp(0, maxTime, this.stateMachine.getTime())
 
-    this.setScale(1 + percent*0.5)
+    this.setScale(1 + (percent*percent)*0.5)
     this.hurtShakingAngle = percent * 28 //Esta es ua variable relacionado con el daño, pero la reutilizamos por el efecto de agitacion.
     this.setBirghtness(lerp(0.5, 3.0, percent))
 

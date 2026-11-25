@@ -13,13 +13,14 @@ const USERNAME_MAX_WIDTH = 34 //Ancho disponible abajo a la izquierda, segun el 
 const USERNAME_ELLIPSIS = '...'
 
 /*
-Muestra las barras de vida y hambre del pez seleccionado al pasar el mouse por encima, en la parte de abajo de la pantalla.
+Muestra las barras de vida, hambre y evolucion del pez seleccionado al pasar el mouse por encima, en la parte de abajo de la pantalla.
 Tambien muestra su nombre abajo a la izquierda. El color del relleno cambia segun el porcentaje: verde > 0.666, amarillo > 0.333, rojo por debajo.
 */
 export class StatsFishViewr extends Phaser.GameObjects.Container {
   declare public scene: MainScene
 
   private fish: Fish | null = null
+  private vases: Phaser.GameObjects.Sprite[] = []
   private fillers: Phaser.GameObjects.Sprite[] = []
   private usernameText: Phaser.GameObjects.Text
   private onPointerMove: (pointer: Phaser.Input.Pointer) => void
@@ -29,10 +30,11 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
 
     this.setDepth(101)
 
-    //Frame 0 del vase = corazon (vida), frame 1 = muslo (hambre).
-    for (let i = 0; i < 2; i++) {
+    //Frame 0 del vase = corazon (vida), 1 = muslo (hambre), 2 = estrella (evolucion).
+    for (let i = 0; i < 3; i++) {
       const vase = scene.add.sprite(0, i * BAR_SPACING_Y, 'statBarVase', i).setOrigin(0, 0)
       const filler = scene.add.sprite(FILL_OFFSET_X, i * BAR_SPACING_Y + FILL_OFFSET_Y, 'statBarFiller', 0).setOrigin(0, 0)
+      this.vases.push(vase)
       this.fillers.push(filler)
       this.add([vase, filler])
     }
@@ -107,20 +109,41 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
     if (picked !== null) { this.setFish(picked) }
   }
 
+  /*
+  Si el pez evoluciono, busca el nuevo pez con el mismo nombre para seguir mostrando sus stats.
+  Si murio, no hay sucesor y se limpia la seleccion.
+  */
+  private findSuccessorOf(lastFish: Fish): Fish | null {
+    if (!lastFish.stateMachine.isOn('evolve')) { return null }
+
+    for (const fish of this.scene.fiishes.getChildren()) {
+      if (!(fish instanceof Fish)) { continue }
+      if (!fish.active || fish === lastFish) { continue }
+      if (fish.username === lastFish.username) { return fish }
+    }
+    return null
+  }
+
   //Llamado cada frame desde MainScene.update.
   refresh(): void {
     if (this.fish === null) { return }
-    if (!this.fish.active) { //El pez murio.
-      this.setFish(null)
+    if (!this.fish.active) { //El pez murio o evoluciono.
+      this.setFish(this.findSuccessorOf(this.fish))
       return
     }
 
     this.fish.outlineFx.setActive(true)
 
+    const evolutionMaxTime = this.fish.evolutionMaxTime
     const percents = [
       clamp(this.fish.life / this.fish.initLife, 0, 1),
-      clamp(this.fish.hunger, 0, 1)
+      clamp(this.fish.hunger, 0, 1),
+      clamp(evolutionMaxTime > 0 ? this.fish.evolutionTimeCount / evolutionMaxTime : 0, 0, 1)
     ]
+
+    //Los peces que no pueden evolucionar (por ejemplo, los grandes) no muestran la barra de evolucion.
+    const canEvolve = this.fish.nextEvolutionClass !== undefined
+    this.vases[2].setVisible(canEvolve)
 
     for (let i = 0; i < this.fillers.length; i++) {
       const percent = percents[i]
@@ -131,7 +154,7 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
       filler.setFrame(frame)
 
       const width = Math.round(FILL_WIDTH * percent)
-      filler.setVisible(width > 0)
+      filler.setVisible(width > 0 && (i !== 2 || canEvolve))
       filler.setCrop(0, 0, width, FILL_HEIGHT)
     }
   }

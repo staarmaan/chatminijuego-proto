@@ -24,8 +24,8 @@ export class TankData {
     this.scene = scene
   }
 
-  contaminateWater(percent: number):void { clamp(this.waterContaminationPercentage += abs(percent), 0, 1) }
-  cureWater(percent: number):void { clamp(this.waterContaminationPercentage -= abs(percent),0,1) }
+  contaminateWater(percent: number):void { this.waterContaminationPercentage = clamp(this.waterContaminationPercentage += abs(percent), 0, 1) }
+  cureWater(percent: number):void { this.waterContaminationPercentage = clamp(this.waterContaminationPercentage -= abs(percent),0,1) }
 
   getExtraHungerLossPercentFromContamination():number {
     return 1 + Math.pow(this.getWaterContaminationPercentage(), 2)*CONTAMINATION_EXTRA_HUNGER_LOSS
@@ -37,7 +37,7 @@ export class TankData {
   }
 
   getWaterContaminationPercentage(): number {
-    clamp(this.waterContaminationPercentage,0,1)
+    this.waterContaminationPercentage = clamp(this.waterContaminationPercentage,0,1)
     return this.waterContaminationPercentage
   }
 }
