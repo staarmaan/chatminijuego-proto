@@ -8,6 +8,8 @@ export class Croqueta extends Food {
     const contaminateFrequency = rnum(15,30)
     super(scene, 1, circleRadius, contaminateFrequency, 'fishFood', username, x, y)
 
+    this.hungerPercentAdd = 0.2
+
     const offset = 2.5 - circleRadius
     this.body?.setOffset(offset, offset)
 

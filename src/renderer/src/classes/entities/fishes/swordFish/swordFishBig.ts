@@ -7,8 +7,9 @@ export class SwordFishBig extends Fish {
     super(scene, FISH_SIZES.BIG, "swordFish",  undefined, 1.7, username, x,y)
     this.dmg *= 2.0
     this.defense *= 0.5
-    this.fillHungerMulti = 0.6
+    this.fillHungerMulti = 0.8
     this.lossHungerPerSecond *= 0.5
+    this.starveDmg = 0.2
   }
 
 }

@@ -15,7 +15,7 @@ la calidad del agua, historial de pescados o cantidad de peces.
 */
 export class TankData {
   private userEntityHistory: entityHistorySlot[] = [] //Aqui, el primer indice es la entidad mas reciente.
-  private waterContaminationPercentage: number = 0 //Goes from 0.0 to 1.0.
+  private waterContaminationPercentage: number = 1 //Goes from 0.0 to 1.0.
   private aliveFishCount = 0
 
   public scene: MainScene

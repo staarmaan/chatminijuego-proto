@@ -17,7 +17,7 @@ export class CorpseFish extends Food {
 
     this.contaminationLifeLoss = 5
     this.contaminationPercentAdd = 0.05 + (0.01 * fishSize)
-    this.hungerPercentAdd = 0.05 + (0.05 * fishSize)
+    this.hungerPercentAdd = 0.215 + (0.075 * fishSize)
 
     this.anims.timeScale = 0.0
     this.setDepth(0.01)

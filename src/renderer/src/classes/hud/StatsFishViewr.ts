@@ -2,6 +2,10 @@ import Phaser from 'phaser'
 import { MainScene } from '../../main'
 import { Fish } from '../entities/Fiish'
 import { clamp } from '../../utils'
+import { FISH_SIZES } from '../entities/Fiish'
+
+
+const FISH_PREVIEW_SCALES = [2, 1.5, 1.0]
 
 const FILL_WIDTH = 36
 const FILL_HEIGHT = 2
@@ -22,6 +26,7 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
   private fish: Fish | null = null
   private vases: Phaser.GameObjects.Sprite[] = []
   private fillers: Phaser.GameObjects.Sprite[] = []
+  private fishPreview: Phaser.GameObjects.Image
   private usernameText: Phaser.GameObjects.Text
   private onPointerMove: (pointer: Phaser.Input.Pointer) => void
 
@@ -38,6 +43,10 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
       this.fillers.push(filler)
       this.add([vase, filler])
     }
+
+    //Vista previa del pez, abajo a la izquierda (absoluto: -22, 249). A escala 2 coincide con el mockup.
+    this.fishPreview = scene.add.image(-30.5, 12.5, 'swordFish', 0).setOrigin(0.5, 0.5).setScale(2)
+    this.add(this.fishPreview)
 
     //Nombre del pez, abajo a la izquierda (absoluto: 12, 311).
     this.usernameText = scene.add.text(-48, 25, '', {
@@ -133,6 +142,15 @@ export class StatsFishViewr extends Phaser.GameObjects.Container {
     }
 
     this.fish.outlineFx.setActive(true)
+
+    if (this.fish.visible) {
+      const fish = this.fish
+      this.fishPreview.setTexture(fish.texture.key, fish.frame.name)
+      const scale = FISH_PREVIEW_SCALES[fish.fishSize]
+      this.fishPreview.setScale(fish.scaleX*scale, fish.scaleY*scale)
+      this.fishPreview.setAngle(fish.angle)
+      this.fishPreview.setFlipX(fish.flipX)
+    }
 
     const evolutionMaxTime = this.fish.evolutionMaxTime
     const percents = [

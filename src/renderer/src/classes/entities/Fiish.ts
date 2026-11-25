@@ -29,7 +29,7 @@ export class Fish extends Entity {
   public lossHungerPerSecond = 0.0165 //Decrementa hunger en porcentage por segundo.
   public healPercentFromFullHungerPerSecond = 0.05 //Cuando hunger esta por encima de 66.6666%, se cura con el valor de esta variable.
   public fillHungerMulti = 1.0 //Cuando come comida, el porcentage de hunger que da la comida sera multiplicado por este valor antes de ser añadido a hunger.
-  public evolutionMaxTime = rpow(5, 25, 2)
+  public evolutionMaxTime = rpow(10, 100, 2)
   public evolutionTimeCount = 0.0
   public defense = 1.0 //Porentage. Mientras mas bajo, menos daño recive de ataques de peces y vsiceversa.
   public dmg = 0.265 //Cantidad que se restara al life de otro pescado al atacar.
@@ -44,6 +44,7 @@ export class Fish extends Entity {
   public fishTexture: string
   public eatPriority: eatPriorities = { food: 1, smallFish: 2, medFish: 3, bigFish: 4 }
   public nextEvolutionClass?: FishClass //Si tiene una clase asignada, evolucionará a esta cuando evolutionTimeCount alcance evolutionMaxTime. Si no, no evoluciona.
+  private hurtFromStarvation = false
 
   //Para animacion
   private turnAroundDir = 1 //Utilizado para voltear el turnAroundAngle solo cuando cambia de direccion de velocityX.
@@ -154,7 +155,7 @@ export class Fish extends Entity {
   }
   private doSwimmingWavingAnimation(dt:number): void {
     this.swimmingScalingTimer += dt*this.swimmingScalingTimeScale
-    const finalScaleX = 1.0 + sin(this.swimmingScalingTimer*3)*0.15
+    const finalScaleX = 1.0 + sin(this.swimmingScalingTimer*3)*0.1
     this.setScale(finalScaleX, 1)
   }
   private handleMovementAngle(dt: number): void {
@@ -218,8 +219,16 @@ export class Fish extends Entity {
     this.destroy()
   }
 
-  getDamaged(dmg: number, defense = 1): void {
+  /*
+  Ojo, que defense siempre sera 1 si el daño es por hambruna (osea si isStarveDamage es true).
+  */
+  getDamaged(dmg: number, defense = 1, isStarveDamage = false): void {
     if (this.stateMachine.isOn('evolve')) { return }
+
+    if (isStarveDamage) {
+      this.hurtFromStarvation = true
+      defense = 1
+    }
 
     const forgivenessLife = 0.001 //Si recive daño mortal, lo perdona permitiendo aguatar un hit mas.
     if (this.life <= forgivenessLife) {
@@ -272,7 +281,7 @@ export class Fish extends Entity {
 
   startInitialFoodSearchTimer(): void {
     this.timer.after(rnum(0, 4), () => {
-      this.timer.every(1.5678987654321, () => {
+      this.timer.every(3.456789, () => {
         if (!this.stateMachine.isOn('wander')) { return }
         if (this.isHungryForFood()) { this.searchToGetTargetFood() }
         if (this.isHungryForFish()) { this.searchToGetTargetFish() }
@@ -282,9 +291,9 @@ export class Fish extends Entity {
 
   startStarveDamageTimer(): void {
     this.timer.after(rnum(0, 4), () => {
-      this.timer.every(1.05, () => {
+      this.timer.every(1.1, () => {
         if (this.hunger > 0) { return }
-        this.getDamaged(this.starveDmg)
+        this.getDamaged(this.starveDmg, 1, true)
       })
     })
   }
@@ -335,6 +344,8 @@ export class Fish extends Entity {
   de un pez es menor al que tienen para perseguir a uno
   */
   onTargetedByFish(otherFish: Fish): void {
+    if (!otherFish.isHungryForFish()) { return }
+
     const dx = otherFish.x - this.x
     const dy = otherFish.y - this.y
     //No es necesario conseguir la raiz cuadrada para la distancia, de hecho es considerablemente un poco mas optimizado a que si se usara Math.sqrt.
@@ -440,9 +451,16 @@ export class Fish extends Entity {
   hurtStart(): void {
     this.setTint(0xffbbbb)
 
-    this.hurtShakingAngle = 66.66
+    this.hurtShakingAngle = 55
 
-    //Aplicar knockback solo si existe el pez que lo ataco no es nulo.
+    //Aplicar knockback solo si existe el pez que lo ataco no es nulo y tambien si el daño no fue por hambre.
+    if (this.hurtFromStarvation === true) {
+      this.hurtFromStarvation = false
+      this.hurtShakingAngle = 20
+      this.setTint(0xffdcdc)
+      this.stateMachine.setTime(0.05)
+      return
+    }
     if (this.targetFish === null) { return }
 
     const otherFish = this.targetFish
@@ -475,8 +493,12 @@ export class Fish extends Entity {
     this.setTint(0xffffff)
   }
 
+  /*
+  Solo deberia de escapar de un pez que es mas grande que el y que tambien este hambriento por comer peces.
+  */
   escapeUpdate(dt:number): void {
-    if (this.targetFish === null) {
+    if (this.targetFish === null || !this.targetFish.isHungryForFish()) {
+      this.targetFish = null
       this.stateMachine.simpleSwitch(this, 'wander')
       return
     }
@@ -505,7 +527,7 @@ export class Fish extends Entity {
       targetX = this.targetFish.getX()
       targetY = this.targetFish.getY()
 
-      if (this.justTicked && (this.tickCount % 44 == 0)) {
+      if (this.justTicked && (this.tickCount % 77 == 0)) {
         this.targetFish.onTargetedByFish(this)
       } //esto seria alrededor de cada 0.7333
     } else if (this.targetFood !== null) {
@@ -563,12 +585,12 @@ export class Fish extends Entity {
     this.setVelocity(0, 0)
   }
   evolveUpdate(dt: number): void {
-    const maxTime = 1.333
+    const maxTime = 2.333
     const percent = invLerp(0, maxTime, this.stateMachine.getTime())
 
-    this.setScale(1 + (percent*percent)*0.5)
-    this.hurtShakingAngle = percent * 28 //Esta es ua variable relacionado con el daño, pero la reutilizamos por el efecto de agitacion.
-    this.setBirghtness(lerp(0.5, 3.0, percent))
+    this.setScale(1 + (percent*percent)*0.75)
+    this.hurtShakingAngle = percent * 35 //Esta es ua variable relacionado con el daño, pero la reutilizamos por el efecto de agitacion.
+    this.setBirghtness(lerp(0.5, 3.0, percent*percent))
 
     if (percent >= 1.0) {
       this.doEvolution()

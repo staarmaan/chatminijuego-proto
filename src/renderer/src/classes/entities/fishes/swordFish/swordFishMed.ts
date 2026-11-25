@@ -10,7 +10,8 @@ export class SwordFishMed extends Fish {
     this.evolutionMaxTime *= 2
     this.defense *= 0.75
     this.lossHungerPerSecond *= 0.75
-    this.fillHungerMulti = 0.8
+    this.fillHungerMulti = 0.9
+    this.starveDmg = 0.15
   }
 
 }

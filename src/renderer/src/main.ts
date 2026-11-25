@@ -32,6 +32,7 @@ export class MainScene extends Phaser.Scene {
   private fishSubtypeIndex: number = 0
   private waterHealthAntenaAngle = 0.0
   private waterHealthAntenaImage!: Phaser.GameObjects.Image
+  private bgContaminatedImage!: Phaser.GameObjects.Image
 
   public fishCounter!: HudFishCounter
   public statsFishViewr!: StatsFishViewr
@@ -77,11 +78,15 @@ export class MainScene extends Phaser.Scene {
     const { width, height } = this.sys.game.config as { width: number; height: number };
     const bg = this.add.image(width*0.5, height*0.5, 'bg');
     bg.setDisplaySize(width, height);
+    this.bgContaminatedImage = this.add.image(width*0.5, height*0.5, 'bgContaminated');
+    this.bgContaminatedImage.setDisplaySize(width, height);
+    this.bgContaminatedImage.setAlpha(0)
+
     const hud = this.add.image(width*0.5, height*0.5, 'hud');
     hud.setDisplaySize(width, height);
     hud.setDepth(100)
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       //const x = Phaser.Math.Between(16, width - 16)
       const croqueta = new Croqueta(this)
       this.food.add(croqueta)
@@ -188,8 +193,14 @@ console.log(Phaser.VERSION);
     const dt = _delta * 0.001
     //const tiempo = _time * 0.001
 
-    this.waterHealthAntenaAngle = expDec(this.waterHealthAntenaAngle, this.tankData.getWaterContaminationPercentage()*170, 1.1, dt)
+    const contmainationPercent = this.tankData.getWaterContaminationPercentage()
+    const decay = 0.5
+    this.waterHealthAntenaAngle = expDec(this.waterHealthAntenaAngle, contmainationPercent*170, decay, dt)
     this.waterHealthAntenaImage.setAngle(this.waterHealthAntenaAngle)
+
+    this.bgContaminatedImage.setAlpha(
+      expDec(this.bgContaminatedImage.alpha, contmainationPercent*contmainationPercent, decay*0.5, dt)
+    )
 
     this.statsFishViewr.refresh()
 

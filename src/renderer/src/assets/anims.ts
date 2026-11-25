@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import bg from './images/bg.png'
+import bgContaminated from './images/bgContaminated.png'
 import hud from './images/hud.png'
 import smallFishSheet from './images/fishes/smallFishes.png'
 import medFishSheet from './images/fishes/medFishes.png'
@@ -14,6 +15,7 @@ import statBarFiller from './images/hud/statBarFiller.png'
 
 export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.image('bg', bg)
+  scene.load.image('bgContaminated', bgContaminated)
   scene.load.image('hud', hud)
   scene.load.spritesheet('smallFish', smallFishSheet, { frameWidth: 16, frameHeight: 16 })
   scene.load.spritesheet('medFish', medFishSheet, { frameWidth: 32, frameHeight: 32 })
