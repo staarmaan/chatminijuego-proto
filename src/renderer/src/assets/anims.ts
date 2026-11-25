@@ -9,6 +9,8 @@ import genericSmokeSheet from './images/fx/genericSmoke.png'
 import { newFishSheets } from './newFishSheets'
 import bigNumbers from './images/hud/bigNumbers.png'
 import smallNumbers from './images/hud/smallNumbers.png'
+import statBarVase from './images/hud/statBarVase.png'
+import statBarFiller from './images/hud/statBarFiller.png'
 
 export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.image('bg', bg)
@@ -20,6 +22,8 @@ export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.spritesheet('genericSmoke', genericSmokeSheet, { frameWidth: 16, frameHeight: 16 })
   scene.load.spritesheet('bigNumbers', bigNumbers, { frameWidth: 15, frameHeight: 20 })
   scene.load.spritesheet('smallNumbers', smallNumbers, { frameWidth: 20, frameHeight: 20 })
+  scene.load.spritesheet('statBarVase', statBarVase, { frameWidth: 46, frameHeight: 8 })
+  scene.load.spritesheet('statBarFiller', statBarFiller, { frameWidth: 36, frameHeight: 2 })
 
   for (const sheet of newFishSheets) {
     scene.load.spritesheet(sheet.key, sheet.url, {

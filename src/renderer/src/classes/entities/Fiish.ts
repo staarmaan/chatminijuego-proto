@@ -1,8 +1,9 @@
 import { Entity } from "./Entity";
 import type { MainScene } from '../../main'
-import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees, randsign } from '../../utils'
+import { moveTo, fromPloar, angleTo, rpow, expDec, round, normalize, rnum, randbool, randangle, clamp, randegrees, randsign, invLerp, lerp } from '../../utils'
 import { Food } from "./Food";
 import { CorpseFish } from "./foods/corpseFish";
+import { OutlineController } from '../shaders/Outline';
 
 const abs = Math.abs
 const cos = Math.cos
@@ -16,25 +17,33 @@ export enum FISH_SIZES {
 
 export type eatPriorities = {food:number, smallFish:number, medFish:number, bigFish:number}
 
+export type FishClass = new (...args: any[]) => Fish
+
+let nextFishId = 0
+
 export class Fish extends Entity {
   //Stats
   public life:number
   public initLife: number
   public hunger = 1.0 //Porentage que va de 1.0 y decrementa por lossHungerPerSecond (por segundo) hasta llegar a 0.0.
-  public lossHungerPerSecond = 0.01 //Decrementa hunger en porcentage por segundo.
-  public healPercentFromFullHungerPerSecond = 0.1 //Decrementa hunger en porcentage por segundo.
+  public lossHungerPerSecond = 0.0165 //Decrementa hunger en porcentage por segundo.
+  public healPercentFromFullHungerPerSecond = 0.05 //Cuando hunger esta por encima de 66.6666%, se cura con el valor de esta variable.
+  public fillHungerMulti = 1.0 //Cuando come comida, el porcentage de hunger que da la comida sera multiplicado por este valor antes de ser añadido a hunger.
+  public evolutionMaxTime = rpow(5, 25, 2)
   public evolutionTimeCount = 0.0
   public defense = 1.0 //Porentage. Mientras mas bajo, menos daño recive de ataques de peces y vsiceversa.
-  public dmg = 0.251 //Cantidad que se restara al life de otro pescado al atacar.
+  public dmg = 0.265 //Cantidad que se restara al life de otro pescado al atacar.
   public starveDmg = 0.1 //Cantidad que se restara a su life cuando su hunger este en 0.
   public readonly fishSize: FISH_SIZES
   public readonly username: string
+  public readonly fishId: number
 
   //Otros importantes
   public targetFish: Fish|null = null //Utilizado en general para perseguir, atacar o escapar de un Fish.
   public targetFood: Food | null = null //Utilizado con los FishCroquettes, Coconut o CorpseFish.
   public fishTexture: string
-  public eatPriority:eatPriorities = {food:1, smallFish:2, medFish:3, bigFish:4}
+  public eatPriority: eatPriorities = { food: 1, smallFish: 2, medFish: 3, bigFish: 4 }
+  public nextEvolutionClass?: FishClass //Si tiene una clase asignada, evolucionará a esta cuando evolutionTimeCount alcance evolutionMaxTime. Si no, no evoluciona.
 
   //Para animacion
   private turnAroundDir = 1 //Utilizado para voltear el turnAroundAngle solo cuando cambia de direccion de velocityX.
@@ -44,16 +53,23 @@ export class Fish extends Entity {
   private swimmingScalingTimer = 0.0
   private swimmingScalingTimeScale = 1.0
   private hurtShakingAngle = 0.0
+  public outlineFx: Phaser.Filters.Controller
 
   //Para movimiento
   private wanderTargetVelX = 0.0 //Porentage que va de 0.0 a 1.0. Se utiliza en wander state.
   private wanderTargetVelY = 0.0 //Porentage que va de 0.0 a 1.0. Se utiliza en wander state.
 
-  constructor(scene: MainScene, life=1, x = rnum(0, scene.scale.width), y = 32, fishSize: FISH_SIZES, username="noname", texture: string) {
+  constructor(scene: MainScene, fishSize: FISH_SIZES, texture: string, nextEvolutionClass?: FishClass, life=1, username="", x = rnum(0, scene.scale.width), y = 32) {
     super(scene, x, y, texture)
+
+    const internalFilters = this.filters!.internal
+    this.outlineFx = internalFilters.add(new OutlineController(internalFilters.camera, 1, 0xffffff))
+    this.outlineFx.setActive(false)
 
     this.life = life
     this.initLife = life
+
+    this.nextEvolutionClass = nextEvolutionClass
 
     this.scene.tankData.incrementAliveFishCount(1)
 
@@ -61,6 +77,10 @@ export class Fish extends Entity {
 
     this.fishTexture = texture
     this.fishSize = fishSize
+
+    this.fishId = nextFishId
+    nextFishId++
+    if (username === "") { username = `fish-${this.fishId}` }
     this.username = username
 
     this.play(`${this.fishTexture}-size${this.fishSize}`)
@@ -134,7 +154,7 @@ export class Fish extends Entity {
   }
   private doSwimmingWavingAnimation(dt:number): void {
     this.swimmingScalingTimer += dt*this.swimmingScalingTimeScale
-    const finalScaleX = 1.0 + sin(this.swimmingScalingTimer)*0.15
+    const finalScaleX = 1.0 + sin(this.swimmingScalingTimer*3)*0.15
     this.setScale(finalScaleX, 1)
   }
   private handleMovementAngle(dt: number): void {
@@ -192,13 +212,15 @@ export class Fish extends Entity {
   }
 
   die(): void {
-    //spawn corpse
+    if (this.stateMachine.isOn('evolve')) {return}
     const corpse = new CorpseFish(this)
     this.onDie(corpse)
     this.destroy()
   }
 
   getDamaged(dmg: number, defense = 1): void {
+    if (this.stateMachine.isOn('evolve')) { return }
+
     const forgivenessLife = 0.001 //Si recive daño mortal, lo perdona permitiendo aguatar un hit mas.
     if (this.life <= forgivenessLife) {
       this.die()
@@ -211,7 +233,7 @@ export class Fish extends Entity {
   }
 
   fillHunger(percentAdd: number): void {
-    this.hunger = clamp(this.hunger + abs(percentAdd), 0, this.initLife)
+    this.hunger = clamp(this.hunger + abs(percentAdd * this.fillHungerMulti), 0, this.initLife)
   }
 
   /*
@@ -236,6 +258,7 @@ export class Fish extends Entity {
     //if (!this.isHungryForFood()) {return}
     if (this.targetFood === null) {return}
     if (food !== this.targetFood) { return }
+    if (!this.stateMachine.isOn('chase')) {return}
     food.getBitenByFish(this)
   }
 
@@ -266,7 +289,20 @@ export class Fish extends Entity {
     })
   }
 
+  doEvolution(): void {
+    if (!this.active) {return}
+    if (!this.nextEvolutionClass) {return}
+    const evolvedFish = new this.nextEvolutionClass(this.scene, this.getX(), this.getY(), this.username)
+    this.scene.fiishes.add(evolvedFish)
+    evolvedFish.setVelocityY(-25)
+    evolvedFish.onEvolveSpawn()
+    evolvedFish.setFlipX(this.flipX)
+    this.destroy()
+  }
+
   //Funciones de "eventos".
+
+  onEvolveSpawn(): void {return}
 
   /*
   Todavia no se destruye cuando se llama esta funcion. Hecha para ser sobre-escrita.
@@ -323,7 +359,7 @@ export class Fish extends Entity {
   //Funciones de estados.
 
   spawnStart(): void {
-    this.setVelocityY(rpow(64, 16, 2))
+    this.setVelocityY(rpow(72, 26, 2))
   }
   spawnUpdate(dt: number): void {
     if (this.stateMachine.getTime() > 1.5) {
@@ -384,17 +420,17 @@ export class Fish extends Entity {
     else {this.swimmingScalingTimeScale = 0.333}
 
     //Si esta cerca de los margenes de la pantalla, tratar de regresar al centro.
-    const outPixelsX = (this.fishSize+1) * 12
-    const outPixelsY = 80 + outPixelsX //La resolucion del juego es de 320 pixeles pero el tamaño "jugable" es de 240 pixeles. Restando los dos da 80.
+    const outPixelsX = 42 + (this.fishSize*4)
+    const outPixelsY = 40 + outPixelsX //La resolucion del juego es de 320 pixeles pero el tamaño "jugable" es de 240 pixeles. Restando los da 80, pero se tiene que dividir entre dos porque esta cantidad aplica para arriba y abajo.
     if (this.isOffScreen(outPixelsX, outPixelsY)) {
       const { width, height } = this.scene.scale
-      const angleOffset = (rnum(-1,1)) * 1.001 //Esto es en radianes.
-      const gotoAngle = angleTo(this.x, this.y, width * 0.5, height * 0.5) + angleOffset
-      const vel = fromPloar(gotoAngle, rpow(1, 0, 8))
+      const angleOffset = (rnum(-1,1)) * 0.5 //Esto es en radianes.
+      const gotoAngle = angleTo(this.getX(), this.getY(), width * 0.5, height * 0.5) + angleOffset
+      const vel = fromPloar(gotoAngle, rpow(1, 0.5, 8))
       this.wanderTargetVelX = vel[0]
       this.wanderTargetVelY = vel[1]
 
-      this.timeCount = 0
+      this.timeCount = -rnum(0.5, 4.5)
     }
   }
   wanderEnd(): void {
@@ -519,7 +555,28 @@ export class Fish extends Entity {
     this.setVelocityY(expDec(vely, 0, decay, dt))
   }
 
+  evolveStart(): void {
+    this.lossHungerPerSecond = 0.0
+    this.healPercentFromFullHungerPerSecond = 0.0
+    this.defense = 0.0
+    this.timer.clear()
+    this.setVelocity(0, 0)
+  }
+  evolveUpdate(dt: number): void {
+    const maxTime = 1.333
+    const percent = invLerp(0, maxTime, this.stateMachine.getTime())
+
+    this.setScale(1 + percent*0.5)
+    this.hurtShakingAngle = percent * 28 //Esta es ua variable relacionado con el daño, pero la reutilizamos por el efecto de agitacion.
+    this.setBirghtness(lerp(0.5, 3.0, percent))
+
+    if (percent >= 1.0) {
+      this.doEvolution()
+    }
+  }
+
   override thisupdate(dt: number): void {
+    this.outlineFx.setActive(false)
     this.handleAnimationAngles(dt)
     this.doSwimmingWavingAnimation(dt)
 
@@ -538,6 +595,10 @@ export class Fish extends Entity {
       this.life = clamp(this.life + this.healPercentFromFullHungerPerSecond*dt, 0, this.initLife)
     }
 
+    if (!this.nextEvolutionClass) {return}
     this.evolutionTimeCount += dt
+    if (this.evolutionTimeCount >= this.evolutionMaxTime) {
+      this.stateMachine.simpleSwitch(this, 'evolve')
+    }
   }
 }

@@ -21,6 +21,7 @@ export class Food extends Entity {
   public contaminateFrequency = 12.5
   public currentContaminationFase = 0
   public targetVelY = rpow(2.0, 6.0, 3)
+  public velxMulti = 1.0
   public angleForWaterMovement = randangle()
 
   public username: string
@@ -109,7 +110,7 @@ export class Food extends Entity {
     this.angleForWaterMovement += dt
     const SPEED_X = 16.0
     const SPEED_Y = 12.0
-    const velx = cos(this.angleForWaterMovement) * SPEED_X * this.targetVelY * this.moveDirX
+    const velx = cos(this.angleForWaterMovement) * SPEED_X * this.targetVelY * this.moveDirX * this.velxMulti
     const vely = abs(sin(this.angleForWaterMovement)) * SPEED_Y * this.targetVelY
     this.setVelocity(velx, vely)
   }

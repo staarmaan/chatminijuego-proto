@@ -17,6 +17,7 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
   public readonly id: number //Numero entero unico para esta entidad.
   public stateMachine = new StateMachine() //Se actualiza despues de thisupdate.
   public timer = new Timer() //Se actualiza despues de thisupdate.
+  public colorMatrixFilters: Phaser.Filters.ColorMatrix
   declare public scene: MainScene
 
   constructor(scene: MainScene, x: number, y: number, texture: string, frame?: number) {
@@ -24,6 +25,9 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
 
     this.id = nextId
     nextId++
+
+    this.enableFilters()
+    this.colorMatrixFilters = this.filters!.internal.addColorMatrix()
 
     // Both calls are required when you create the sprite yourself
     scene.add.existing(this)             // adds it to the display list
@@ -33,6 +37,10 @@ export class Entity extends Phaser.Physics.Arcade.Sprite {
   }
 
   public getAge(): number {return this.ageTime}
+
+  public setBirghtness(percent: number):void {
+    this.colorMatrixFilters.colorMatrix.brightness(percent)
+  }
 
   override destroy(fromScene?: boolean): void {
     this.timer.clear()

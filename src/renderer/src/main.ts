@@ -12,11 +12,12 @@ import { Croqueta } from './classes/entities/foods/croqueta'
 import { SwordFishSmall } from './classes/entities/fishes/swordFish/swordFishSmall'
 import { TankData } from './classes/TankData'
 import { HudFishCounter } from './classes/hud/HudFishCounter'
-
+import { StatsFishViewr } from './classes/hud/StatsFishViewr'
+import { registerOutlineFilter } from './classes/shaders/Outline';
 import waterHealthIcon from './assets/images/hud/waterHealthIcon.png'
 import waterHealthAntena from './assets/images/hud/waterHealthAntena.png'
 import waterHealthArch from './assets/images/hud/waterHealthArch.png'
-import { moveTo } from './utils'
+import { expDec, moveTo } from './utils'
 
 
 export class MainScene extends Phaser.Scene {
@@ -29,10 +30,11 @@ export class MainScene extends Phaser.Scene {
 
   private fishTypeIndex: number = 0
   private fishSubtypeIndex: number = 0
-
+  private waterHealthAntenaAngle = 0.0
   private waterHealthAntenaImage!: Phaser.GameObjects.Image
 
   public fishCounter!: HudFishCounter
+  public statsFishViewr!: StatsFishViewr
 
   preload(): void {
     preloadAnims(this)
@@ -45,12 +47,15 @@ export class MainScene extends Phaser.Scene {
   create(): void {
     createAnims(this)
 
+    registerOutlineFilter(this.game);
+
     this.add.image(97, 8, 'waterHealthArch').setDepth(101).setOrigin(0,0)
-    this.waterHealthAntenaImage = this.add.image(130, 27, 'waterHealthAntena').setDepth(102).setOrigin(0.925925, 0.5)
+    this.waterHealthAntenaImage = this.add.image(131, 27, 'waterHealthAntena').setDepth(102).setOrigin(0.925925, 0.5)
     this.add.image(121, 20, 'waterHealthIcon').setDepth(103).setOrigin(0,0)
 
     this.fishCounter = new HudFishCounter(this, 16, 25 )
     this.tankData = new TankData(this)
+    this.statsFishViewr = new StatsFishViewr(this, 60, 286)
 
     this.fiishes = this.physics.add.group({ classType: Fish, runChildUpdate: true })
     this.fiishes.defaults = {} as Phaser.Types.Physics.Arcade.PhysicsGroupDefaults
@@ -100,7 +105,7 @@ export class MainScene extends Phaser.Scene {
         scene.spawnFishFromPayload(payload)
       })
     }
-
+console.log(Phaser.VERSION);
     /*
     const buttonSeparationX = 40
     new Button(this, 8, 8, "spawn", () => {
@@ -183,9 +188,10 @@ export class MainScene extends Phaser.Scene {
     const dt = _delta * 0.001
     //const tiempo = _time * 0.001
 
-    this.waterHealthAntenaImage.setAngle(
-      moveTo(this.waterHealthAntenaImage.angle, this.tankData.getWaterContaminationPercentage()*170, 5*dt)
-    )
+    this.waterHealthAntenaAngle = expDec(this.waterHealthAntenaAngle, this.tankData.getWaterContaminationPercentage()*170, 1.1, dt)
+    this.waterHealthAntenaImage.setAngle(this.waterHealthAntenaAngle)
+
+    this.statsFishViewr.refresh()
 
 
     /*for (let i = 0; i < 5; i++) {} */

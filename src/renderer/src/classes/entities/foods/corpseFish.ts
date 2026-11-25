@@ -13,6 +13,8 @@ export class CorpseFish extends Food {
     fish.scene.food.add(this) // Needed so Group.preUpdate() calls Entity.update() every frame.
     this.play(`${fish.fishTexture}-size${fishSize}`)
 
+    this.velxMulti = 0.25
+
     this.contaminationLifeLoss = 5
     this.contaminationPercentAdd = 0.05 + (0.05 * fishSize)
     this.hungerPercentAdd = 0.2 + (0.05 * fishSize)
