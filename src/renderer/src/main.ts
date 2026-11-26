@@ -18,6 +18,7 @@ import waterHealthIcon from './assets/images/hud/waterHealthIcon.png'
 import waterHealthAntena from './assets/images/hud/waterHealthAntena.png'
 import waterHealthArch from './assets/images/hud/waterHealthArch.png'
 import { expDec, moveTo } from './utils'
+import { BrownSpikeFishSmall } from './classes/entities/fishes/brownFish/brownSpikeFishSmall'
 
 
 export class MainScene extends Phaser.Scene {
@@ -86,15 +87,20 @@ export class MainScene extends Phaser.Scene {
     hud.setDisplaySize(width, height);
     hud.setDepth(100)
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 20; i++) {
       //const x = Phaser.Math.Between(16, width - 16)
       const croqueta = new Croqueta(this)
       this.food.add(croqueta)
     }
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 6; i++) {
       //const x = Phaser.Math.Between(16, width - 16)
       const fish = new SwordFishSmall(this, undefined, undefined)
+      this.fiishes.add(fish)
+    }
+    for (let i = 0; i < 6; i++) {
+      //const x = Phaser.Math.Between(16, width - 16)
+      const fish = new BrownSpikeFishSmall(this, undefined, undefined)
       this.fiishes.add(fish)
     }
 

@@ -12,6 +12,7 @@ import bigNumbers from './images/hud/bigNumbers.png'
 import smallNumbers from './images/hud/smallNumbers.png'
 import statBarVase from './images/hud/statBarVase.png'
 import statBarFiller from './images/hud/statBarFiller.png'
+import statFishPreviewBackdrop from './images/hud/statFishPreviewBackdrop.png'
 
 export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.image('bg', bg)
@@ -26,6 +27,7 @@ export const preloadAnims = (scene: Phaser.Scene): void => {
   scene.load.spritesheet('smallNumbers', smallNumbers, { frameWidth: 20, frameHeight: 20 })
   scene.load.spritesheet('statBarVase', statBarVase, { frameWidth: 46, frameHeight: 8 })
   scene.load.spritesheet('statBarFiller', statBarFiller, { frameWidth: 36, frameHeight: 2 })
+  //scene.load.spritesheet('statFishPreviewBackdrop', statFishPreviewBackdrop, { frameWidth: 36, frameHeight: 2 })
 
   for (const sheet of newFishSheets) {
     scene.load.spritesheet(sheet.key, sheet.url, {

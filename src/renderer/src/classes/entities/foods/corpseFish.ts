@@ -6,8 +6,8 @@ export class CorpseFish extends Food {
   constructor(fish: Fish) {
     const fishSize = fish.fishSize
 
-    const hits = 10 + (5 * fishSize)
-    const circleRadius = 4.0 * (fishSize + 1)
+    const hits = 6 + (6 * fishSize)
+    const circleRadius = 5.0 * (fishSize + 1)
     const contaminateFrequency = rnum(10,20)
     super(fish.scene, hits, circleRadius, contaminateFrequency, fish.fishTexture, fish.username, fish.x, fish.y)
     fish.scene.food.add(this) // Needed so Group.preUpdate() calls Entity.update() every frame.
@@ -17,7 +17,7 @@ export class CorpseFish extends Food {
 
     this.contaminationLifeLoss = 5
     this.contaminationPercentAdd = 0.05 + (0.01 * fishSize)
-    this.hungerPercentAdd = 0.215 + (0.075 * fishSize)
+    this.hungerPercentAdd = 0.2 + (0.1 * fishSize)
 
     this.anims.timeScale = 0.0
     this.setDepth(0.01)

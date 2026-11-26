@@ -29,7 +29,7 @@ export class Fish extends Entity {
   public lossHungerPerSecond = 0.0165 //Decrementa hunger en porcentage por segundo.
   public healPercentFromFullHungerPerSecond = 0.05 //Cuando hunger esta por encima de 66.6666%, se cura con el valor de esta variable.
   public fillHungerMulti = 1.0 //Cuando come comida, el porcentage de hunger que da la comida sera multiplicado por este valor antes de ser añadido a hunger.
-  public evolutionMaxTime = rpow(10, 100, 2)
+  public evolutionMaxTime = rpow(100, 10, 2)
   public evolutionTimeCount = 0.0
   public defense = 1.0 //Porentage. Mientras mas bajo, menos daño recive de ataques de peces y vsiceversa.
   public dmg = 0.265 //Cantidad que se restara al life de otro pescado al atacar.
@@ -39,6 +39,7 @@ export class Fish extends Entity {
   public readonly fishId: number
 
   //Otros importantes
+  public speedMulti = 1.0
   public targetFish: Fish|null = null //Utilizado en general para perseguir, atacar o escapar de un Fish.
   public targetFood: Food | null = null //Utilizado con los FishCroquettes, Coconut o CorpseFish.
   public fishTexture: string
@@ -420,8 +421,8 @@ export class Fish extends Entity {
       } //Cambiar velocityX y velocityY.
     }
 
-    const speed = 25.0 //En pixeles.
-    const accel = speed //En pixeles tambien.
+    const speed = 25.0 * this.speedMulti //En pixeles.
+    const accel = speed * this.speedMulti //En pixeles tambien.
     this.setVelocityX(moveTo(this.body!.velocity.x, this.wanderTargetVelX * speed, dt * accel))
     this.setVelocityY(moveTo(this.body!.velocity.y, this.wanderTargetVelY * speed, dt * accel))
 
@@ -437,11 +438,11 @@ export class Fish extends Entity {
       const { width, height } = this.scene.scale
       const angleOffset = (rnum(-1,1)) * 0.5 //Esto es en radianes.
       const gotoAngle = angleTo(this.getX(), this.getY(), width * 0.5, height * 0.5) + angleOffset
-      const vel = fromPloar(gotoAngle, rpow(1, 0.5, 8))
+      const vel = fromPloar(gotoAngle, rpow(1, 0.5, 8) * this.speedMulti)
       this.wanderTargetVelX = vel[0]
       this.wanderTargetVelY = vel[1]
 
-      this.timeCount = -rnum(0.5, 4.5)
+      this.timeCount = -rnum(0.5, 4.0)
     }
   }
   wanderEnd(): void {
@@ -457,8 +458,8 @@ export class Fish extends Entity {
     if (this.hurtFromStarvation === true) {
       this.hurtFromStarvation = false
       this.hurtShakingAngle = 20
-      this.setTint(0xffdcdc)
-      this.stateMachine.setTime(0.05)
+      this.setTint(0xffcdcd)
+      this.stateMachine.setTime(0.075)
       return
     }
     if (this.targetFish === null) { return }
@@ -514,7 +515,7 @@ export class Fish extends Entity {
     const decayY = rnum(2.5, 4.5)
     const velx = this.body!.velocity.x
     const vely = this.body!.velocity.y
-    const speed = 52.0
+    const speed = 52.0 * this.speedMulti
     this.setVelocityX( expDec(velx, speed*normal[0], decayX, dt, 0.1) )
     this.setVelocityY( expDec(vely, speed*normal[1], decayY, dt, 0.1) )
   }
@@ -527,13 +528,15 @@ export class Fish extends Entity {
       targetX = this.targetFish.getX()
       targetY = this.targetFish.getY()
 
-      if (this.justTicked && (this.tickCount % 77 == 0)) {
+      if (this.justTicked && ((this.tickCount + this.id) % 44 == 0)) {
         this.targetFish.onTargetedByFish(this)
-      } //esto seria alrededor de cada 0.7333
-    } else if (this.targetFood !== null) {
+      }
+    }
+    else if (this.targetFood !== null) {
       targetX = this.targetFood.getX()
       targetY = this.targetFood.getY()
-    } else {
+    }
+    else {
       this.stateMachine.simpleSwitch(this, 'wander')
       return
     }
@@ -549,7 +552,7 @@ export class Fish extends Entity {
     const decayY = rnum(0.5, 7.5)
     const velx = this.body!.velocity.x
     const vely = this.body!.velocity.y
-    const speed = 51.9
+    const speed = 51.9 * this.speedMulti
     this.setVelocityX( expDec(velx, speed*normal[0], decayX, dt, 0.55555) )
     this.setVelocityY( expDec(vely, speed*normal[1], decayY, dt, 0.55555) )
   }
@@ -585,12 +588,12 @@ export class Fish extends Entity {
     this.setVelocity(0, 0)
   }
   evolveUpdate(dt: number): void {
-    const maxTime = 2.333
+    const maxTime = 2.0
     const percent = invLerp(0, maxTime, this.stateMachine.getTime())
 
     this.setScale(1 + (percent*percent)*0.75)
     this.hurtShakingAngle = percent * 35 //Esta es ua variable relacionado con el daño, pero la reutilizamos por el efecto de agitacion.
-    this.setBirghtness(lerp(0.5, 3.0, percent*percent))
+    this.setBirghtness(lerp(0.75, 3.0, percent*percent))
 
     if (percent >= 1.0) {
       this.doEvolution()
